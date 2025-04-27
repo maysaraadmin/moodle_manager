@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2>Moodle Platforms</h2>
-<a href="{% url 'platform-add' %}" class="btn btn-primary mb-3">Add New Platform</a>
+<a href="{% url 'moodle_management:platform-add' %}" class="btn btn-primary mb-3">Add New Platform</a>
 
 <table class="table table-striped">
     <thead>
@@ -26,10 +26,10 @@
                 {% endif %}
             </td>
             <td>
-                <a href="{% url 'platform-detail' platform.id %}" class="btn btn-sm btn-info">View</a>
-                <a href="{% url 'platform-edit' platform.id %}" class="btn btn-sm btn-warning">Edit</a>
-                <a href="{% url 'platform-delete' platform.id %}" class="btn btn-sm btn-danger">Delete</a>
-                <a href="{% url 'platform-test' platform.id %}" class="btn btn-sm btn-primary">Test Connection</a>
+                <a href="{% url 'moodle_management:platform-detail' platform.id %}" class="btn btn-sm btn-info">View</a>
+                <a href="{% url 'moodle_management:platform-edit' platform.id %}" class="btn btn-sm btn-warning">Edit</a>
+                <a href="{% url 'moodle_management:platform-delete' platform.id %}" class="btn btn-sm btn-danger">Delete</a>
+                <a href="{% url 'moodle_management:platform-test' platform.id %}" class="btn btn-sm btn-primary">Test Connection</a>
             </td>
         </tr>
         {% empty %}
