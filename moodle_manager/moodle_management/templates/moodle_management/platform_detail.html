@@ -1,0 +1,39 @@
+{% extends 'moodle_management/base.html' %}
+
+{% block content %}
+<h2>{{ platform.name }}</h2>
+
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Platform Details</h5>
+        <p><strong>URL:</strong> {{ platform.url }}</p>
+        <p><strong>Status:</strong> 
+            {% if platform.active %}
+                <span class="badge bg-success">Active</span>
+            {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+            {% endif %}
+        </p>
+        <p><strong>Created:</strong> {{ platform.created_at }}</p>
+        <p><strong>Last Updated:</strong> {{ platform.updated_at }}</p>
+        
+        <a href="{% url 'platform-edit' platform.id %}" class="btn btn-warning">Edit</a>
+        <a href="{% url 'platform-list' %}" class="btn btn-secondary">Back to List</a>
+        <a href="{% url 'platform-test' platform.id %}" class="btn btn-primary">Test Connection</a>
+    </div>
+</div>
+
+<div class="mt-4">
+    <h4>Connection Test Results</h4>
+    {% if test_result %}
+        <div class="alert alert-{% if test_result.success %}success{% else %}danger{% endif %}">
+            {{ test_result.message }}
+            {% if test_result.data %}
+                <pre>{{ test_result.data|pprint }}</pre>
+            {% endif %}
+        </div>
+    {% else %}
+        <p>No connection test performed yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
