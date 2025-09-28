@@ -1,14 +1,25 @@
-# LMS Explorer - PyQt5 Edition
+# LMS Explorer - Enhanced PyQt5 Edition
 
-A Learning Management System interface for Moodle, converted from the original Delphi/Pascal application to Python using PyQt5.
+A Learning Management System interface for Moodle, converted from the original Delphi/Pascal application to Python using PyQt5. This enhanced edition features a completely redesigned modern interface with advanced settings, improved usability, and professional styling.
+
+## Credits
+
+**Special thanks to the original author:**
+- **https://github.com/ildemartinez** - Original LMS Explorer creator
+- **https://github.com/ildemartinez/LMS-Explorer** - Original Delphi/Pascal implementation
+
+This Python port is based on the excellent work of the original LMS Explorer project.
 
 ## Features
 
 - **Moodle Integration**: Connect to Moodle LMS instances using REST API
 - **Course Management**: Browse and manage courses, categories, and content
 - **User Management**: View enrolled users, groups, and profiles
-- **Tree View Navigation**: Intuitive tree-based interface for exploring LMS structure
+- **Enhanced UI**: Modern, professional interface with toolbar-centric design
+- **Advanced Filtering**: Smart search and filtering system for courses and users
+- **Tree View Navigation**: Intuitive tree-based interface with color-coded icons
 - **Configuration Management**: Save and manage multiple LMS connections
+- **Settings System**: Comprehensive settings dialog with themes and customization
 - **Cross-Platform**: Works on Windows, macOS, and Linux
 
 ## Requirements
@@ -34,14 +45,20 @@ A Learning Management System interface for Moodle, converted from the original D
    ```
 
 2. Configure your LMS connection:
-   - Go to LMS -> Connect
+   - Click the **🔗 Connect** button in the toolbar
    - Enter your Moodle site URL, username, and password
    - Click "Connect" to establish the connection
 
 3. Navigate the LMS structure:
-   - Use the tree view on the left to browse categories, courses, and users
-   - Use the filter box to search for specific items
+   - Use the **enhanced tree view** on the left to browse categories, courses, and users
+   - Use the **🔍 Filter** box to search for specific items
+   - Use the **📚 Courses** and **👥 Users** quick filter buttons
    - Right-click on items for context menu actions
+
+4. Customize the interface:
+   - Click **⚙️ Settings** in the toolbar for comprehensive settings
+   - Change themes, fonts, and other preferences
+   - Settings are applied instantly
 
 ## Configuration
 
@@ -66,27 +83,58 @@ autoconnect=1
 ## Project Structure
 
 ```
-LMS-Explorer-main/
-├── main.py                 # Main application entry point
-├── requirements.txt        # Python dependencies
-├── config.ini_dist        # Sample configuration file
-├── lms_explorer/          # Main package
-│   ├── __init__.py
-│   ├── main_window.py     # Main application window
-│   ├── lms_interface.py   # LMS interface definitions
-│   ├── moodle_rest.py     # Moodle REST API client
-│   ├── config_manager.py  # Configuration management
-│   ├── data_models.py     # Data model implementations
-│   ├── utils.py           # Utility functions
-│   ├── tree_views/        # Tree widget implementations
-│   │   ├── __init__.py
-│   │   └── network_tree.py
-│   └── dialogs/           # Dialog implementations
-│       ├── __init__.py
-│       ├── about_dialog.py
-│       └── lms_dialog.py
-└── README.md             # This file
+moodle_manager/
+├── main.py                    # Main application entry point
+├── main_window.py             # Enhanced main window with modern UI
+├── requirements.txt           # Python dependencies
+├── config.ini                 # Configuration file (auto-generated)
+├── config_template.ini        # Template for manual configuration
+├── README.md                  # This documentation file
+├──
+├── Core Modules:
+├── data_models.py             # Data model implementations and interfaces
+├── lms_interface.py           # LMS interface definitions
+├── moodle_rest.py             # Moodle REST API client
+├── config_manager.py          # Configuration management
+├── credential_manager.py      # Secure credential handling
+├── utils.py                   # Utility functions and helpers
+├──
+├── Enhanced Features:
+├── dialogs/                   # Dialog implementations
+│   ├── settings_dialog.py     # Comprehensive settings dialog
+│   ├── about_dialog.py        # About dialog with app info
+│   └── lms_dialog.py          # LMS connection dialog
+├── tree_views/                # Enhanced tree widgets
+│   └── network_tree.py        # Advanced tree view with icons
+├── forms/                     # Form implementations
+└── helpers/                   # Helper utilities
 ```
+
+## Enhanced User Interface
+
+This Python port features a completely redesigned, modern user interface with significant improvements:
+
+### 🎨 **Modern Design**
+- **Clean, professional appearance** with contemporary styling
+- **Toolbar-centric interface** - all primary actions easily accessible
+- **No menu clutter** - streamlined for better user experience
+- **Consistent color scheme** and modern typography
+
+### 🔧 **Enhanced Features**
+- **Advanced Settings Dialog** - Comprehensive customization options
+- **Real-time Theme Switching** - Light/dark/system theme support
+- **Smart Filtering System** - Quick filters for courses and users
+- **Color-coded Tree Icons** - Visual categorization of LMS elements
+- **Progress Indicators** - Visual feedback for all operations
+- **Status Bar Integration** - Connection and data status display
+
+### 📱 **Toolbar Actions**
+- **🔗 Connect** - Establish LMS connection
+- **🔄 Refresh** - Update data from Moodle
+- **📊 Export** - Export data to various formats
+- **⚙️ Settings** - Access comprehensive settings
+- **ℹ️ About** - Application information
+- **❌ Exit** - Close application
 
 ## API Reference
 
@@ -95,7 +143,7 @@ LMS-Explorer-main/
 The main class for interacting with Moodle's REST API:
 
 ```python
-from lms_explorer.moodle_rest import MoodleRestClient
+from moodle_rest import MoodleRestClient
 
 # Create client
 client = MoodleRestClient("https://your-moodle.com", "username", "password")
@@ -130,7 +178,6 @@ The application uses interface-based design with concrete implementations:
 1. **New Tree Views**: Extend the `NetworkTreeWidget` class or create new tree widgets
 2. **New Dialogs**: Add new dialog classes in the `dialogs` package
 3. **New API Methods**: Extend the `MoodleRestClient` class with new Moodle web service functions
-4. **New Data Models**: Implement new interfaces and concrete classes as needed
 
 ### Testing
 
@@ -150,4 +197,35 @@ Contributions are welcome! Please feel free to submit issues and pull requests.
 
 ## Support
 
-For issues and questions, please refer to the original project documentation or create an issue in the project repository.
+For issues and questions, please refer to:
+- **Original Project**: https://github.com/ildemartinez/LMS-Explorer
+- **This Python Port**: Create an issue in the project repository
+
+---
+
+## 🚀 **Enhanced Edition Highlights**
+
+This Python port includes significant improvements over the original:
+
+### ✨ **Major Enhancements**
+- **🎨 Modern UI Design** - Professional, clean interface with contemporary styling
+- **⚙️ Advanced Settings** - Comprehensive settings dialog with themes and customization
+- **🔍 Smart Filtering** - Enhanced search and filtering capabilities
+- **📱 Toolbar-Centric** - Streamlined interface focused on essential actions
+- **🎯 Zero Duplicates** - Clean, organized UI with no redundant elements
+- **🌈 Visual Improvements** - Color-coded icons, progress indicators, status displays
+
+### 🔧 **Technical Improvements**
+- **Modular Architecture** - Better organized code structure
+- **Settings Persistence** - QSettings-based configuration management
+- **Enhanced Error Handling** - Robust error handling and user feedback
+- **Cross-Platform Compatibility** - Improved compatibility across platforms
+- **Memory Efficiency** - Optimized resource usage and performance
+
+### 📈 **User Experience**
+- **Intuitive Navigation** - Simplified workflow with clear action paths
+- **Visual Feedback** - Progress bars, status indicators, and loading states
+- **Customization Options** - Extensive personalization capabilities
+- **Professional Appearance** - Modern, polished interface design
+
+*Built upon the solid foundation of the original LMS Explorer with modern Python best practices and enhanced user experience.*
