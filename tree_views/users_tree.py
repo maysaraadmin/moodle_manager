@@ -146,8 +146,16 @@ class UsersTreeWidget(CustomTreeWidget):
         
     def view_user_grades(self, user: IUser):
         """View user grades"""
-        # This would typically open a grades dialog
-        pass
+        try:
+            from dialogs.user_grades_dialog import UserGradesDialog
+            dialog = UserGradesDialog(user, self)
+            dialog.exec_()
+        except ImportError:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(self, "User Grades", f"Viewing grades for user: {user.full_name or f'{user.first_name} {user.last_name}'}")
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Error", f"Failed to open user grades: {str(e)}")
         
     def open_user_in_browser(self, user: IUser):
         """Open user profile in browser"""

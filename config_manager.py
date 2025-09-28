@@ -6,6 +6,7 @@ Handles loading and saving configuration settings
 import os
 import configparser
 from typing import Dict, List, Optional
+from credential_manager import get_credential_manager
 
 
 class LMSConfig:
@@ -13,23 +14,29 @@ class LMSConfig:
     
     def __init__(self, name: str = "", url: str = "", username: str = "", 
                  password: str = "", service: str = "moodle_mobile_app", 
-                 autoconnect: bool = False):
+                 autoconnect: bool = False, remember_me: bool = False):
         self.name = name
         self.url = url
         self.username = username
         self.password = password
         self.service = service
         self.autoconnect = autoconnect
+        self.remember_me = remember_me
     
     def to_dict(self) -> Dict[str, str]:
         """Convert to dictionary for saving"""
-        return {
+        data = {
             'url': self.url,
             'user': self.username,
-            'password': self.password,
             'service': self.service,
-            'autoconnect': '1' if self.autoconnect else '0'
+            'autoconnect': '1' if self.autoconnect else '0',
+            'remember_me': '1' if self.remember_me else '0'
         }
+        
+        # Never store password in config file - it's handled by credential manager
+        data['password'] = ''
+            
+        return data
     
     @classmethod
     def from_dict(cls, name: str, data: Dict[str, str]) -> 'LMSConfig':
@@ -40,7 +47,8 @@ class LMSConfig:
             username=data.get('user', ''),
             password=data.get('password', ''),
             service=data.get('service', 'moodle_mobile_app'),
-            autoconnect=data.get('autoconnect', '0') == '1'
+            autoconnect=data.get('autoconnect', '0') == '1',
+            remember_me=data.get('remember_me', '0') == '1'
         )
 
 
@@ -50,6 +58,7 @@ class ConfigManager:
     def __init__(self):
         self.configs: Dict[str, LMSConfig] = {}
         self.config_file = ""
+        self.credential_manager = get_credential_manager()
         
     def load_config(self, config_file: str):
         """Load configuration from file"""
@@ -67,6 +76,14 @@ class ConfigManager:
         for section_name in config.sections():
             if section_name.startswith('lms'):
                 lms_config = LMSConfig.from_dict(section_name, dict(config[section_name]))
+                
+                # If remember_me is enabled, retrieve password from credential manager
+                if lms_config.remember_me:
+                    service_name = f"lms_{lms_config.name}_{lms_config.url}"
+                    credentials = self.credential_manager.get_credentials(service_name)
+                    if credentials and credentials.get('remember', False):
+                        lms_config.password = credentials.get('password', '')
+                
                 self.configs[section_name] = lms_config
     
     def save_config(self, config_file: str = None):
@@ -90,21 +107,40 @@ class ConfigManager:
             config.write(f)
     
     def add_config(self, name: str, url: str, username: str, password: str, 
-                   service: str = "moodle_mobile_app", autoconnect: bool = False):
+                   service: str = "moodle_mobile_app", autoconnect: bool = False, remember_me: bool = False):
         """Add a new LMS configuration"""
         section_name = f"lms{len(self.configs) + 1}"
-        self.configs[section_name] = LMSConfig(
+        lms_config = LMSConfig(
             name=name,
             url=url,
             username=username,
             password=password,
             service=service,
-            autoconnect=autoconnect
+            autoconnect=autoconnect,
+            remember_me=remember_me
         )
+        self.configs[section_name] = lms_config
+        
+        # Save credentials to credential manager if remember_me is enabled
+        if remember_me:
+            service_name = f"lms_{name}_{url}"
+            self.credential_manager.save_credentials(
+                service_name=service_name,
+                username=username,
+                password=password,
+                remember=remember_me
+            )
     
     def remove_config(self, section_name: str):
         """Remove an LMS configuration"""
         if section_name in self.configs:
+            lms_config = self.configs[section_name]
+            
+            # Remove credentials from credential manager if they exist
+            if lms_config.remember_me:
+                service_name = f"lms_{lms_config.name}_{lms_config.url}"
+                self.credential_manager.delete_credentials(service_name)
+            
             del self.configs[section_name]
     
     def get_config(self, section_name: str) -> Optional[LMSConfig]:

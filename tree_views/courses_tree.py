@@ -162,13 +162,29 @@ class CoursesTreeWidget(CustomTreeWidget):
                 
     def view_course_content(self, course: ICourse):
         """View course content"""
-        # This would typically open a content dialog
-        pass
+        try:
+            from dialogs.course_content_dialog import CourseContentDialog
+            dialog = CourseContentDialog(course, self)
+            dialog.exec_()
+        except ImportError:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Course Content", f"Viewing content for course: {course.fullname or course.shortname}")
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Error", f"Failed to open course content: {str(e)}")
         
     def view_course_users(self, course: ICourse):
         """View course users"""
-        # This would typically open a users dialog
-        pass
+        try:
+            from dialogs.course_users_dialog import CourseUsersDialog
+            dialog = CourseUsersDialog(course, self)
+            dialog.exec_()
+        except ImportError:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Course Users", f"Viewing users for course: {course.fullname or course.shortname}")
+        except Exception as e:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Error", f"Failed to open course users: {str(e)}")
         
     def open_course_in_browser(self, course: ICourse):
         """Open course in browser"""

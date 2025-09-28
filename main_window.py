@@ -125,18 +125,51 @@ class MainWindow(QMainWindow):
         
     def create_toolbar(self):
         """Create the toolbar"""
-        # This would be implemented with actual toolbar actions
-        pass
+        toolbar = self.addToolBar("Main Toolbar")
+        
+        # Connect action
+        connect_action = QAction("Connect", self)
+        connect_action.setStatusTip("Connect to LMS")
+        connect_action.triggered.connect(self.on_connect)
+        toolbar.addAction(connect_action)
+        
+        toolbar.addSeparator()
+        
+        # Refresh action
+        refresh_action = QAction("Refresh", self)
+        refresh_action.setStatusTip("Refresh data from LMS")
+        refresh_action.triggered.connect(self.on_refresh)
+        toolbar.addAction(refresh_action)
+        
+        toolbar.addSeparator()
+        
+        # About action
+        about_action = QAction("About", self)
+        about_action.setStatusTip("About LMS Explorer")
+        about_action.triggered.connect(self.on_about)
+        toolbar.addAction(about_action)
+        
+        # Exit action
+        exit_action = QAction("Exit", self)
+        exit_action.setStatusTip("Exit application")
+        exit_action.triggered.connect(self.close)
+        toolbar.addAction(exit_action)
         
     def load_config(self):
         """Load configuration from config file"""
         config_path = os.path.join(os.path.dirname(sys.executable), 'config.ini')
         if not os.path.exists(config_path):
-            config_path = os.path.join(os.path.dirname(__file__), '..', 'config.ini')
+            config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
             
         if os.path.exists(config_path):
             self.config_manager.load_config(config_path)
             self.status_bar.showMessage(f"Configuration loaded from {config_path}")
+            
+            # Check for auto-connect configuration
+            autoconnect_config = self.config_manager.get_autoconnect_config()
+            if autoconnect_config:
+                # Auto-connect to the configured LMS
+                self.auto_connect_to_lms(autoconnect_config)
         else:
             self.status_bar.showMessage("No configuration file found")
             
@@ -156,12 +189,19 @@ class MainWindow(QMainWindow):
     def on_connect(self):
         """Handle connect action"""
         dialog = LMSDialog(self)
+        
+        # Load existing configurations into the dialog
+        configs = self.config_manager.get_all_configs()
+        dialog.load_lms_configs(configs)
+        
         if dialog.exec_():
             # Get connection details from dialog
             url = dialog.get_url()
             username = dialog.get_username()
             password = dialog.get_password()
             service = dialog.get_service()
+            remember_me = dialog.get_remember_me()
+            autoconnect = dialog.get_connection_data().get('autoconnect', False)
             
             # Set LMS details
             self.lms_interface.set_host(url)
@@ -183,7 +223,8 @@ class MainWindow(QMainWindow):
                     username=username,
                     password=password,
                     service=service,
-                    autoconnect=False
+                    autoconnect=autoconnect,
+                    remember_me=remember_me
                 )
                 self.config_manager.save_config()
                 
@@ -192,10 +233,41 @@ class MainWindow(QMainWindow):
                 self.status_bar.showMessage("Connection failed")
                 print("Failed to connect to LMS")
             
+    def auto_connect_to_lms(self, config):
+        """Auto-connect to LMS using the provided configuration"""
+        self.status_bar.showMessage(f"Auto-connecting to {config.name}...")
+        
+        # Set LMS details
+        self.lms_interface.set_host(config.url)
+        self.lms_interface.set_name(config.name)
+        
+        # Connect to LMS
+        if self.lms_interface.connect(config.username, config.password, config.service):
+            self.status_bar.showMessage(f"Auto-connected to {config.name}")
+            
+            # Update the network tree with loaded data
+            self.network_tree.set_lms(self.lms_interface)
+            
+            print(f"Auto-connected successfully and loaded {len(self.lms_interface.get_categories())} categories and {len(self.lms_interface.get_courses())} courses")
+        else:
+            self.status_bar.showMessage(f"Auto-connect failed for {config.name}")
+            print(f"Failed to auto-connect to {config.name}")
+    
     def on_about(self):
         """Handle about action"""
         dialog = AboutDialog(self)
         dialog.exec_()
+        
+    def on_refresh(self):
+        """Handle refresh action"""
+        if self.lms_interface and self.lms_interface.is_connected():
+            self.status_bar.showMessage("Refreshing data from LMS...")
+            # Refresh the network tree
+            self.network_tree.refresh_data()
+            self.status_bar.showMessage("Data refreshed successfully")
+        else:
+            self.status_bar.showMessage("Not connected to LMS")
+            QMessageBox.warning(self, "Not Connected", "Please connect to LMS first.")
         
     def closeEvent(self, event):
         """Handle window close event"""

@@ -120,6 +120,10 @@ class User(IUser):
         self._first_name = value
         self._filter_content = ""  # Reset filter content
     
+    def set_full_name(self, value: str):
+        self._full_name = value
+        self._filter_content = ""  # Reset filter content
+    
     def set_last_name(self, value: str):
         self._last_name = value
         self._filter_content = ""  # Reset filter content
@@ -250,7 +254,7 @@ class Section(ISection):
         self._modules: List[IModule] = []
         self._filter_content = ""
     
-    def get_course(self) -> Optional[ICourse]:
+    def get_course(self) -> ICourse:
         return self._course
     
     def get_filter_content(self) -> str:
@@ -267,12 +271,12 @@ class Section(ISection):
     def get_name(self) -> str:
         return self._name
     
-    def set_course(self, value: Optional[ICourse]):
-        self._course = value
-    
     def set_name(self, value: str):
         self._name = value
         self._filter_content = ""  # Reset filter content
+    
+    def set_course(self, value: ICourse):
+        self._course = value
     
     def add_module(self, module: IModule):
         """Add a module to this section"""
@@ -390,20 +394,161 @@ class Course(ICourse):
         if section in self._course_content:
             self._course_content.remove(section)
     
-    def get_course_content(self):
+    def get_course_content_from_lms(self):
         """Get course content from LMS"""
-        # Placeholder implementation
-        pass
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._course_content
+        
+        try:
+            # Get course content from Moodle REST API
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get course content
+            content_data = rest_client.get_course_content(self._id)
+            
+            if content_data:
+                # Clear existing content
+                self._course_content.clear()
+                
+                # Parse and create sections and modules
+                for section_data in content_data:
+                    # Create section
+                    section = Section(
+                        section_id=section_data.get('id', 0),
+                        name=section_data.get('name', f"Section {section_data.get('id', 0)}")
+                    )
+                    section.set_course(self)
+                    
+                    # Add modules to section
+                    if 'modules' in section_data:
+                        for module_data in section_data['modules']:
+                            # Create module
+                            module = Module(
+                                module_id=module_data.get('id', 0),
+                                mod_name=module_data.get('modname', 'unknown'),
+                                name=module_data.get('name', 'Unnamed Module')
+                            )
+                            module.set_mod_type(module_data.get('modname', 'unknown'))
+                            module.set_section(section)
+                            
+                            # Add contents to module
+                            if 'contents' in module_data:
+                                for content_data in module_data['contents']:
+                                    content = Content(module)
+                                    content.set_file_name(content_data.get('filename', ''))
+                                    content.set_file_url(content_data.get('fileurl', ''))
+                                    content.set_file_type(content_data.get('mimetype', ''))
+                                    content.set_mime_type(content_data.get('mimetype', ''))
+                                    module.add_content(content)
+                            
+                            section.add_module(module)
+                    
+                    self._course_content.append(section)
+                    
+                print(f"Loaded {len(self._course_content)} sections for course '{self._name}'")
+            else:
+                print(f"No content found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading course content: {e}")
+        
+        return self._course_content
     
     def get_course_roles(self, course_roles: List[str]):
         """Get course roles"""
-        # Placeholder implementation
-        pass
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._course_roles
+        
+        try:
+            # Get enrolled users to determine available roles
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get enrolled users for this course
+            enrolled_users_data = rest_client.get_enrolled_users_by_course_id(self._id)
+            
+            if enrolled_users_data:
+                # Clear existing roles
+                self._course_roles.clear()
+                
+                # Extract unique roles from enrolled users
+                unique_roles = set()
+                for user_data in enrolled_users_data:
+                    if 'roles' in user_data:
+                        for role in user_data['roles']:
+                            unique_roles.add(role.get('name', 'Unknown'))
+                
+                # Convert to list and sort
+                self._course_roles = sorted(list(unique_roles))
+                print(f"Found {len(self._course_roles)} roles in course '{self._name}'")
+            else:
+                print(f"No enrolled users found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading course roles: {e}")
+        
+        return self._course_roles
     
     def get_grade_book(self):
         """Get grade book"""
-        # Placeholder implementation
-        pass
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._grade_items
+        
+        try:
+            # Get grade book from Moodle REST API
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get grade items for this course
+            grade_items_data = rest_client.get_users_grade_book(self._id)
+            
+            if grade_items_data:
+                # Clear existing grade items
+                self._grade_items.clear()
+                
+                # Create grade items from API response
+                for grade_item_data in grade_items_data:
+                    grade_item = GradeItem(
+                        item_name=grade_item_data.get('name', 'Unnamed Grade Item')
+                    )
+                    self._grade_items.append(grade_item)
+                
+                print(f"Loaded {len(self._grade_items)} grade items for course '{self._name}'")
+            else:
+                print(f"No grade items found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading grade book: {e}")
+        
+        return self._grade_items
     
     def get_user_count_by_role(self, role: str) -> int:
         """Get user count by role"""
@@ -415,13 +560,119 @@ class Course(ICourse):
     
     def refresh_enrolled_users(self):
         """Refresh enrolled users"""
-        # Placeholder implementation
-        pass
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._enrolled_users
+        
+        try:
+            # Get enrolled users from Moodle REST API
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get enrolled users for this course
+            enrolled_users_data = rest_client.get_enrolled_users_by_course_id(self._id)
+            
+            if enrolled_users_data:
+                # Clear existing enrolled users
+                self._enrolled_users.clear()
+                
+                # Create user objects from API response
+                for user_data in enrolled_users_data:
+                    user = User(
+                        user_id=user_data.get('id', 0),
+                        first_name=user_data.get('firstname', ''),
+                        last_name=user_data.get('lastname', ''),
+                        email=user_data.get('email', '')
+                    )
+                    user.set_full_name(user_data.get('fullname', ''))
+                    user.set_username(user_data.get('username', ''))
+                    user.set_course(self)
+                    user.set_lms(self._lms)
+                    
+                    # Set user roles
+                    if 'roles' in user_data:
+                        roles = [role.get('name', '') for role in user_data['roles']]
+                        user.set_roles(roles)
+                    
+                    self._enrolled_users.append(user)
+                
+                print(f"Refreshed {len(self._enrolled_users)} enrolled users for course '{self._name}'")
+            else:
+                print(f"No enrolled users found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error refreshing enrolled users: {e}")
+        
+        return self._enrolled_users
     
     def refresh_user_groups(self):
         """Refresh user groups"""
-        # Placeholder implementation
-        pass
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._user_groups
+        
+        try:
+            # Get user groups from Moodle REST API
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get user groups for this course
+            groups_data = rest_client.get_user_groups_by_course_id(self._id)
+            
+            if groups_data:
+                # Clear existing user groups
+                self._user_groups.clear()
+                
+                # Create group objects from API response
+                for group_data in groups_data:
+                    group = UsersGroup(
+                        group_name=group_data.get('name', 'Unnamed Group'),
+                        group_id=group_data.get('id', 0)
+                    )
+                    
+                    # Get group members if available
+                    if 'members' in group_data:
+                        members = []
+                        for member_data in group_data['members']:
+                            user = User(
+                                user_id=member_data.get('id', 0),
+                                first_name=member_data.get('firstname', ''),
+                                last_name=member_data.get('lastname', ''),
+                                email=member_data.get('email', '')
+                            )
+                            user.set_full_name(member_data.get('fullname', ''))
+                            user.set_username(member_data.get('username', ''))
+                            user.set_course(self)
+                            user.set_lms(self._lms)
+                            members.append(user)
+                        group.set_users_in_group(members)
+                    
+                    self._user_groups.append(group)
+                
+                print(f"Refreshed {len(self._user_groups)} user groups for course '{self._name}'")
+            else:
+                print(f"No user groups found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error refreshing user groups: {e}")
+        
+        return self._user_groups
     
     # Properties to match ICourse interface
     category = property(get_category, set_category)
@@ -783,13 +1034,120 @@ class LMS(ILMS):
     
     def get_users_by_almost_all_fields(self, filter_str: str) -> List[IUser]:
         """Get users by almost all fields"""
-        # Placeholder implementation
-        return []
+        if not self.is_connected():
+            print("LMS not connected")
+            return []
+        
+        try:
+            # Get users from Moodle REST API
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self.get_host(),
+                username=self.get_username(),
+                password=self.get_password(),
+                service=self.get_service()
+            )
+            rest_client.token = self.get_token()
+            
+            # Search for users by various fields
+            # We'll use the get_users method with criteria
+            criteria = [
+                {'key': 'firstname', 'value': filter_str},
+                {'key': 'lastname', 'value': filter_str},
+                {'key': 'email', 'value': filter_str},
+                {'key': 'username', 'value': filter_str},
+                {'key': 'idnumber', 'value': filter_str}
+            ]
+            
+            users_data = rest_client.get_users(criteria)
+            
+            if users_data:
+                users = []
+                for user_data in users_data:
+                    user = User(
+                        user_id=user_data.get('id', 0),
+                        first_name=user_data.get('firstname', ''),
+                        last_name=user_data.get('lastname', ''),
+                        email=user_data.get('email', '')
+                    )
+                    user.set_full_name(user_data.get('fullname', ''))
+                    user.set_username(user_data.get('username', ''))
+                    user.set_lms(self)
+                    
+                    # Set user roles if available
+                    if 'roles' in user_data:
+                        roles = [role.get('name', '') for role in user_data['roles']]
+                        user.set_roles(roles)
+                    
+                    users.append(user)
+                
+                print(f"Found {len(users)} users matching '{filter_str}'")
+                return users
+            else:
+                print(f"No users found matching '{filter_str}'")
+                return []
+                
+        except Exception as e:
+            print(f"Error searching users: {e}")
+            return []
     
     def download_all_course_content(self, course: ICourse):
         """Download all course content"""
-        # Placeholder implementation
-        pass
+        if not self.is_connected():
+            print("LMS not connected")
+            return
+        
+        try:
+            import os
+            from moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self.get_host(),
+                username=self.get_username(),
+                password=self.get_password(),
+                service=self.get_service()
+            )
+            rest_client.token = self.get_token()
+            
+            # Create download directory if it doesn't exist
+            download_dir = f"downloads/{course.get_name()}"
+            os.makedirs(download_dir, exist_ok=True)
+            
+            print(f"Downloading course content to: {download_dir}")
+            
+            # Get course content
+            course_content = course.get_course_content()
+            downloaded_files = 0
+            
+            # Iterate through sections and modules
+            for section in course_content:
+                section_dir = os.path.join(download_dir, section.get_name())
+                os.makedirs(section_dir, exist_ok=True)
+                
+                for module in section.get_modules():
+                    module_dir = os.path.join(section_dir, module.get_name())
+                    os.makedirs(module_dir, exist_ok=True)
+                    
+                    # Download content files
+                    for content in module.get_contents():
+                        if content.get_file_url():
+                            file_name = content.get_file_name() or f"file_{downloaded_files}"
+                            file_path = os.path.join(module_dir, file_name)
+                            
+                            print(f"Downloading: {file_name}")
+                            
+                            if rest_client.download_file(content.get_file_url(), file_path):
+                                downloaded_files += 1
+                            else:
+                                print(f"Failed to download: {file_name}")
+            
+            print(f"Downloaded {downloaded_files} files for course '{course.get_name()}'")
+            
+        except Exception as e:
+            print(f"Error downloading course content: {e}")
     
     # Properties required by ILMS interface
     categories = property(get_categories)

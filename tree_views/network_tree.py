@@ -341,3 +341,8 @@ class NetworkTreeWidget(QTreeWidget):
     def refresh_category(self, category):
         """Refresh category data"""
         print(f"Refreshing category: {category.name}")
+        
+    def refresh_data(self):
+        """Refresh all data in the tree"""
+        if self.lms:
+            self.populate_tree()

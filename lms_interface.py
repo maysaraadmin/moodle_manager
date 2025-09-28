@@ -105,7 +105,7 @@ class IUser(ABC):
         pass
     
     @abstractmethod
-    def get_lms(self) -> 'ILMS':
+    def get_lms(self) -> Optional['ILMS']:
         """Get the LMS instance"""
         pass
     
@@ -135,7 +135,7 @@ class IUser(ABC):
         pass
     
     @abstractmethod
-    def set_lms(self, value: 'ILMS'):
+    def set_lms(self, value: Optional['ILMS']):
         """Set the LMS instance"""
         pass
     
@@ -195,7 +195,7 @@ class ICourse(ABC):
         pass
     
     @abstractmethod
-    def get_lms(self) -> 'ILMS':
+    def get_lms(self) -> Optional['ILMS']:
         """Get the LMS instance"""
         pass
     
@@ -210,12 +210,12 @@ class ICourse(ABC):
         pass
     
     @abstractmethod
-    def set_category(self, value: 'ICategory'):
+    def set_category(self, value: Optional['ICategory']):
         """Set the category this course belongs to"""
         pass
     
     @abstractmethod
-    def set_lms(self, value: 'ILMS'):
+    def set_lms(self, value: Optional['ILMS']):
         """Set the LMS instance"""
         pass
     
@@ -256,7 +256,7 @@ class ICategory(ABC):
         pass
     
     @abstractmethod
-    def get_lms(self) -> 'ILMS':
+    def get_lms(self) -> Optional['ILMS']:
         """Get the LMS instance"""
         pass
     
@@ -266,7 +266,7 @@ class ICategory(ABC):
         pass
     
     @abstractmethod
-    def set_lms(self, value: 'ILMS'):
+    def set_lms(self, value: Optional['ILMS']):
         """Set the LMS instance"""
         pass
     
@@ -333,7 +333,7 @@ class ISection(ABC):
     """Interface for sections"""
     
     @abstractmethod
-    def get_course(self) -> ICourse:
+    def get_course(self) -> Optional['ICourse']:
         """Get the course this section belongs to"""
         pass
     
@@ -358,7 +358,7 @@ class ISection(ABC):
         pass
     
     @abstractmethod
-    def set_course(self, value: ICourse):
+    def set_course(self, value: Optional['ICourse']):
         """Set the course this section belongs to"""
         pass
     

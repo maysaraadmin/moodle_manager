@@ -86,6 +86,10 @@ class LMSDialog(QDialog):
         self.autoconnect_checkbox = QCheckBox("Auto-connect on startup")
         details_group.addWidget(self.autoconnect_checkbox)
         
+        # Remember me
+        self.remember_me_checkbox = QCheckBox("Remember me (save password securely)")
+        details_group.addWidget(self.remember_me_checkbox)
+        
         layout.addLayout(details_group)
         
         # Buttons
@@ -135,6 +139,7 @@ class LMSDialog(QDialog):
                 self.password_edit.setText(config.password)
                 self.service_edit.setText(config.service)
                 self.autoconnect_checkbox.setChecked(config.autoconnect)
+                self.remember_me_checkbox.setChecked(config.remember_me)
                 
     def test_connection(self):
         """Test the connection to the LMS"""
@@ -190,7 +195,8 @@ class LMSDialog(QDialog):
             'username': username,
             'password': password,
             'service': service,
-            'autoconnect': self.autoconnect_checkbox.isChecked()
+            'autoconnect': self.autoconnect_checkbox.isChecked(),
+            'remember_me': self.remember_me_checkbox.isChecked()
         }
         
         # Accept the dialog
@@ -215,3 +221,7 @@ class LMSDialog(QDialog):
     def get_service(self):
         """Get the service name"""
         return self.config_data.get('service', '') if self.config_data else ''
+        
+    def get_remember_me(self):
+        """Get the remember me setting"""
+        return self.config_data.get('remember_me', False) if self.config_data else False
