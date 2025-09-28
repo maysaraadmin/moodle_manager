@@ -366,13 +366,146 @@ class MainWindow(QMainWindow):
                 # Show progress
                 self.show_progress(True, "Exporting data...")
 
-                # Export data (placeholder - implement based on your export functionality)
-                QMessageBox.information(self, "Export", f"Data exported to {file_path}")
+                # Export data based on selected format
+                if file_path.endswith('.xlsx'):
+                    self.export_to_excel(file_path)
+                elif file_path.endswith('.csv'):
+                    self.export_to_csv(file_path)
+                else:
+                    # Default to CSV if no extension
+                    self.export_to_csv(file_path)
+
+                QMessageBox.information(self, "Export Complete", f"Data exported to {file_path}")
 
             except Exception as e:
                 QMessageBox.critical(self, "Export Error", f"Failed to export data: {str(e)}")
             finally:
                 self.show_progress(False)
+
+    def export_to_excel(self, file_path):
+        """Export LMS data to Excel format"""
+        try:
+            import pandas as pd
+            from datetime import datetime
+
+            # Create data for export
+            export_data = []
+
+            # Export categories
+            for category in self.lms_interface.get_categories():
+                export_data.append({
+                    'Type': 'Category',
+                    'ID': category.get_id(),
+                    'Name': category.get_name(),
+                    'Courses Count': category.get_courses_count()
+                })
+
+                # Add courses in this category
+                for course in category.get_courses():
+                    export_data.append({
+                        'Type': 'Course',
+                        'ID': course.get_id(),
+                        'Name': course.get_name(),
+                        'Category': category.get_name(),
+                        'Enrolled Users': len(course.get_enrolled_users()),
+                        'User Groups': len(course.get_user_groups())
+                    })
+
+                    # Add enrolled users
+                    for user in course.get_enrolled_users():
+                        export_data.append({
+                            'Type': 'User',
+                            'ID': user.get_id(),
+                            'Name': user.get_full_name(),
+                            'Email': user.get_email(),
+                            'Course': course.get_name(),
+                            'Roles': ', '.join(user.get_roles())
+                        })
+
+            # Create DataFrame
+            df = pd.DataFrame(export_data)
+
+            # Add timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            df['Export Date'] = timestamp
+
+            # Export to Excel
+            with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+                df.to_excel(writer, sheet_name='LMS Data', index=False)
+
+                # Auto-adjust column widths
+                worksheet = writer.sheets['LMS Data']
+                for column in worksheet.columns:
+                    max_length = 0
+                    column_letter = column[0].column_letter
+                    for cell in column:
+                        try:
+                            if len(str(cell.value)) > max_length:
+                                max_length = len(str(cell.value))
+                        except:
+                            pass
+                    adjusted_width = min(max_length + 2, 50)
+                    worksheet.column_dimensions[column_letter].width = adjusted_width
+
+            print(f"Exported {len(export_data)} records to Excel: {file_path}")
+
+        except ImportError:
+            # Fallback to CSV if pandas not available
+            self.export_to_csv(file_path.replace('.xlsx', '.csv'))
+        except Exception as e:
+            raise Exception(f"Excel export failed: {str(e)}")
+
+    def export_to_csv(self, file_path):
+        """Export LMS data to CSV format"""
+        try:
+            import csv
+            from datetime import datetime
+
+            # Create data for export
+            export_data = []
+
+            # Add header
+            export_data.append(['Type', 'ID', 'Name', 'Additional Info', 'Export Date'])
+
+            # Export categories
+            for category in self.lms_interface.get_categories():
+                export_data.append([
+                    'Category',
+                    str(category.get_id()),
+                    category.get_name(),
+                    f"Courses: {category.get_courses_count()}",
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                ])
+
+                # Add courses in this category
+                for course in category.get_courses():
+                    export_data.append([
+                        'Course',
+                        str(course.get_id()),
+                        course.get_name(),
+                        f"Category: {category.get_name()}",
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ])
+
+                    # Add enrolled users
+                    for user in course.get_enrolled_users():
+                        export_data.append([
+                            'User',
+                            str(user.get_id()),
+                            user.get_full_name(),
+                            f"Email: {user.get_email()}, Roles: {', '.join(user.get_roles())}",
+                            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        ])
+
+            # Write to CSV
+            with open(file_path, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerows(export_data)
+
+            print(f"Exported {len(export_data)-1} records to CSV: {file_path}")
+
+        except Exception as e:
+            raise Exception(f"CSV export failed: {str(e)}")
 
     def on_settings(self):
         """Handle settings action"""
@@ -455,9 +588,11 @@ class MainWindow(QMainWindow):
         # Update the network tree styling based on settings
         if show_icons:
             # Icons are already enabled in the tree widget
+            # The tree widget uses icons by default
             pass
         else:
-            # Hide icons (this would require modifying the tree widget)
+            # Hide icons - we can modify the icon display in the tree widget
+            # This would require modifying the NetworkTreeWidget to support icon visibility
             pass
 
         # Update alternating colors

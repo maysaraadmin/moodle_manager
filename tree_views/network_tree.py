@@ -357,6 +357,66 @@ class NetworkTreeWidget(QTreeWidget):
         if self.lms:
             self.populate_tree()
 
+    def filter_items(self, filter_text):
+        """Filter tree items based on text"""
+        if not filter_text:
+            # Show all items if no filter
+            self.show_all_items()
+            return
+
+        filter_text = filter_text.lower()
+        root = self.invisibleRootItem()
+
+        for i in range(root.childCount()):
+            item = root.child(i)
+            self.filter_item_recursive(item, filter_text)
+
+    def filter_item_recursive(self, item, filter_text):
+        """Recursively filter tree items"""
+        if not item:
+            return
+
+        # Check if this item matches the filter
+        item_matches = False
+        data = item.data(0, Qt.UserRole)
+
+        if data:
+            # Check filter content if available
+            if hasattr(data, 'filter_content'):
+                item_matches = filter_text in data.filter_content.lower()
+            else:
+                # Fallback to text content
+                item_text = item.text(0).lower()
+                item_matches = filter_text in item_text
+
+        # Show/hide based on match
+        item.setHidden(not item_matches)
+
+        # Check children
+        for i in range(item.childCount()):
+            child = item.child(i)
+            child_matches = self.filter_item_recursive(child, filter_text)
+
+            # If any child matches, show this item too
+            if child_matches:
+                item_matches = True
+                item.setHidden(False)
+
+        return item_matches
+
+    def show_all_items(self):
+        """Show all tree items"""
+        def show_recursive(item):
+            if not item:
+                return
+            item.setHidden(False)
+            for i in range(item.childCount()):
+                show_recursive(item.child(i))
+
+        root = self.invisibleRootItem()
+        for i in range(root.childCount()):
+            show_recursive(root.child(i))
+
     def on_item_clicked(self, item, column):
         """Handle item click"""
         data = item.data(0, Qt.UserRole)
