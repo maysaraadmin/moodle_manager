@@ -502,12 +502,18 @@ class IContent(ABC):
         """Set the file URL"""
         pass
     
+    @abstractmethod
+    def get_filter_content(self) -> str:
+        """Get filter content for the content"""
+        pass
+    
     # Properties
     file_name = property(get_file_name, set_file_name)
     file_type = property(get_file_type, set_file_type)
     mime_type = property(get_mime_type, set_mime_type)
     file_url = property(get_file_url, set_file_url)
     module = property(get_module)
+    filter_content = property(get_filter_content)
 
 
 class LMSInterface(ILMS):

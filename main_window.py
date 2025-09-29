@@ -5,11 +5,12 @@ Enhanced UI with modern styling and improved functionality
 
 import os
 import sys
+import logging
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QMenuBar, QMenu, QAction, QStatusBar, QSplitter,
                              QLineEdit, QPushButton, QTreeWidget, QTreeWidgetItem,
                              QMessageBox, QFileDialog, QProgressBar, QLabel,
-                             QFrame, QSizePolicy)
+                             QFrame, QSizePolicy, QHeaderView)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QPainter, QColor, QFont, QPalette
 
@@ -19,6 +20,10 @@ from tree_views.network_tree import NetworkTreeWidget
 from dialogs.about_dialog import AboutDialog
 from dialogs.lms_dialog import LMSDialog
 from dialogs.settings_dialog import SettingsDialog
+from login_dialog import LoginDialog
+from auth_manager import AuthManager
+
+logger = logging.getLogger(__name__)
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -27,6 +32,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.lms_interface = LMS()
         self.config_manager = ConfigManager()
+        self.auth_manager = AuthManager("MoodleManager")
         
         self.init_ui()
         self.load_config()
@@ -233,6 +239,11 @@ class MainWindow(QMainWindow):
                 background-color: #f0f0f0;
             }
         """)
+        
+        # Connect network tree signals
+        self.network_tree.item_selected.connect(self.on_tree_item_selected)
+        self.network_tree.course_double_clicked.connect(self.on_course_double_clicked)
+        
         left_layout.addWidget(self.network_tree)
 
         return left_panel
@@ -646,31 +657,163 @@ class MainWindow(QMainWindow):
         """Expand all tree items"""
         self.network_tree.expandAll()
         
+    def on_tree_item_selected(self, item_data):
+        """Handle tree item selection"""
+        if hasattr(item_data, 'course_content'):
+            # It's a course, load its content
+            self.load_course_content(item_data)
+        elif hasattr(item_data, 'full_name'):
+            # It's a user, show user info
+            self.show_user_info(item_data)
+            
+    def on_course_double_clicked(self, course):
+        """Handle course double-click - load course content"""
+        self.load_course_content(course)
+        
+    def load_course_content(self, course):
+        """Load and display course content in the content area"""
+        if not course:
+            return
+            
+        try:
+            # Clear current content
+            self.content_area.clear()
+            
+            # Set content area header
+            self.content_area.setHeaderLabels(["Section", "Module", "Content", "File"])
+            
+            # Load course content
+            course_content = course.get_course_content()
+            
+            if not course_content:
+                # Try to load content from LMS
+                course.get_course_content_from_lms()
+                course_content = course.get_course_content()
+            
+            if course_content:
+                for section in course_content:
+                    section_item = QTreeWidgetItem(self.content_area)
+                    section_item.setText(0, section.name or f"Section {section.id}")
+                    section_item.setText(1, "")
+                    section_item.setText(2, "")
+                    section_item.setText(3, "")
+                    
+                    # Add modules to section
+                    for module in section.modules:
+                        module_item = QTreeWidgetItem(section_item)
+                        module_item.setText(0, "")
+                        module_item.setText(1, module.name or f"Module {module.id}")
+                        module_item.setText(2, module.mod_type or "unknown")
+                        module_item.setText(3, "")
+                        
+                        # Add contents to module
+                        for content in module.contents:
+                            content_item = QTreeWidgetItem(module_item)
+                            content_item.setText(0, "")
+                            content_item.setText(1, "")
+                            content_item.setText(2, content.file_name or "File")
+                            content_item.setText(3, content.file_type or "unknown")
+                            
+                    # Expand section
+                    section_item.setExpanded(True)
+                    
+                # Auto-resize columns
+                self.content_area.header().resizeSections(QHeaderView.ResizeToContents)
+                
+                # Update status bar
+                self.statusBar().showMessage(f"Loaded content for course: {course.name}")
+            else:
+                # No content available
+                no_content_item = QTreeWidgetItem(self.content_area)
+                no_content_item.setText(0, "No course content available")
+                no_content_item.setText(1, "")
+                no_content_item.setText(2, "")
+                no_content_item.setText(3, "")
+                
+                self.statusBar().showMessage(f"No content available for course: {course.name}")
+                
+        except Exception as e:
+            # Show error in content area
+            error_item = QTreeWidgetItem(self.content_area)
+            error_item.setText(0, f"Error loading course content: {str(e)}")
+            error_item.setText(1, "")
+            error_item.setText(2, "")
+            error_item.setText(3, "")
+            
+            self.statusBar().showMessage(f"Error loading course content: {str(e)}")
+            
+    def show_user_info(self, user):
+        """Show user information in the content area"""
+        if not user:
+            return
+            
+        try:
+            # Clear current content
+            self.content_area.clear()
+            
+            # Set content area header for user info
+            self.content_area.setHeaderLabels(["Property", "Value"])
+            
+            # Add user information
+            user_info = [
+                ("Name", user.get_full_name()),
+                ("Username", getattr(user, 'username', '')),
+                ("Email", user.get_email()),
+                ("ID", str(user.get_id())),
+                ("First Name", user.get_first_name()),
+                ("Last Name", getattr(user, 'last_name', '')),
+            ]
+            
+            for property_name, value in user_info:
+                if value:  # Only show non-empty values
+                    item = QTreeWidgetItem(self.content_area)
+                    item.setText(0, property_name)
+                    item.setText(1, str(value))
+                    
+            # Auto-resize columns
+            self.content_area.header().resizeSections(QHeaderView.ResizeToContents)
+            
+            # Update status bar
+            self.statusBar().showMessage(f"Showing user info for: {user.get_full_name()}")
+            
+        except Exception as e:
+            # Show error
+            error_item = QTreeWidgetItem(self.content_area)
+            error_item.setText(0, "Error loading user info")
+            error_item.setText(1, str(e))
+            
+            self.statusBar().showMessage(f"Error loading user info: {str(e)}")
+        
     def on_connect(self):
-        """Handle connect action"""
-        dialog = LMSDialog(self)
+        """Handle connect action with enhanced login dialog"""
+        dialog = LoginDialog(self, self.auth_manager)
         
-        # Load existing configurations into the dialog
-        configs = self.config_manager.get_all_configs()
-        dialog.load_lms_configs(configs)
+        # Connect signals
+        dialog.login_successful.connect(self.on_login_successful)
+        dialog.login_failed.connect(self.on_login_failed)
+        dialog.credentials_stored.connect(self.on_credentials_stored)
         
-        if dialog.exec_():
-            # Get connection details from dialog
-            url = dialog.get_url()
-            username = dialog.get_username()
-            password = dialog.get_password()
-            service = dialog.get_service()
-            remember_me = dialog.get_remember_me()
-            autoconnect = dialog.get_connection_data().get('autoconnect', False)
+        # Show dialog
+        dialog.exec_()
+    
+    def on_login_successful(self, connection_details):
+        """Handle successful login"""
+        try:
+            # Extract connection details
+            host = connection_details['host']
+            username = connection_details['username']
+            service = connection_details['service']
+            remember_me = connection_details['remember_me']
+            site_info = connection_details['site_info']
             
             # Set LMS details
-            self.lms_interface.set_host(url)
+            self.lms_interface.set_host(host)
             self.lms_interface.set_name("Moodle")
             
-            # Connect to LMS
+            # Connect to LMS (credentials should already be stored by AuthManager)
             self.statusBar().showMessage("Connecting to LMS...")
             
-            if self.lms_interface.connect(username, password, service):
+            if self.lms_interface.connect(username, "", service):  # Password will be retrieved from AuthManager
                 self.statusBar().showMessage("Connected to LMS")
                 
                 # Update the network tree with loaded data
@@ -679,11 +822,11 @@ class MainWindow(QMainWindow):
                 # Save configuration
                 self.config_manager.add_config(
                     name="Moodle",
-                    url=url,
+                    url=host,
                     username=username,
-                    password=password,
+                    password="",  # Don't store password in config anymore
                     service=service,
-                    autoconnect=autoconnect,
+                    autoconnect=remember_me,  # Use remember_me as autoconnect
                     remember_me=remember_me
                 )
                 self.config_manager.save_config()
@@ -692,26 +835,66 @@ class MainWindow(QMainWindow):
             else:
                 self.statusBar().showMessage("Connection failed")
                 print("Failed to connect to LMS")
+                
+        except Exception as e:
+            self.statusBar().showMessage(f"Login processing error: {e}")
+            print(f"Error processing login: {e}")
+    
+    def on_login_failed(self, error_message):
+        """Handle login failure"""
+        self.statusBar().showMessage("Login failed")
+        print(f"Login failed: {error_message}")
+    
+    def on_credentials_stored(self, success):
+        """Handle credential storage result"""
+        if success:
+            self.statusBar().showMessage("Credentials stored securely")
+        else:
+            self.statusBar().showMessage("Warning: Failed to store credentials")
             
     def auto_connect_to_lms(self, config):
-        """Auto-connect to LMS using the provided configuration"""
+        """Auto-connect to LMS using the provided configuration and AuthManager"""
         self.statusBar().showMessage(f"Auto-connecting to {config.name}...")
         
         # Set LMS details
         self.lms_interface.set_host(config.url)
         self.lms_interface.set_name(config.name)
         
-        # Connect to LMS
-        if self.lms_interface.connect(config.username, config.password, config.service):
-            self.statusBar().showMessage(f"Auto-connected to {config.name}")
-            
-            # Update the network tree with loaded data
-            self.network_tree.set_lms(self.lms_interface)
-            
-            print(f"Auto-connected successfully and loaded {len(self.lms_interface.get_categories())} categories and {len(self.lms_interface.get_courses())} courses")
-        else:
-            self.statusBar().showMessage(f"Auto-connect failed for {config.name}")
-            print(f"Failed to auto-connect to {config.name}")
+        # Try to get stored credentials from AuthManager first
+        stored_credentials = self.auth_manager.get_credentials(config.url, config.username)
+        
+        if stored_credentials:
+            # Use stored credentials
+            password = stored_credentials.get('password', '')
+            if password:  # Only attempt connection if we have a valid password
+                if self.lms_interface.connect(config.username, password, config.service):
+                    self.statusBar().showMessage(f"Auto-connected to {config.name}")
+                    
+                    # Update the network tree with loaded data
+                    self.network_tree.set_lms(self.lms_interface)
+                    
+                    print(f"Auto-connected successfully and loaded {len(self.lms_interface.get_categories())} categories and {len(self.lms_interface.get_courses())} courses")
+                    return
+            else:
+                # Invalid stored credentials (empty password), clear them
+                logger.warning(f"Found invalid stored credentials for {config.name}, clearing them")
+                self.auth_manager.delete_credentials(config.url, config.username)
+        
+        # If we get here, auto-connect failed - show login dialog
+        self.statusBar().showMessage(f"Auto-connect failed for {config.name}, showing login dialog...")
+        print(f"Failed to auto-connect to {config.name}, showing login dialog")
+        
+        # Create login dialog with pre-filled data
+        dialog = LoginDialog(self, self.auth_manager)
+        dialog.set_credentials(config.url, config.username, config.service)
+        
+        # Connect signals
+        dialog.login_successful.connect(self.on_login_successful)
+        dialog.login_failed.connect(self.on_login_failed)
+        dialog.credentials_stored.connect(self.on_credentials_stored)
+        
+        # Show dialog
+        dialog.exec_()
     
     def on_about(self):
         """Handle about action"""

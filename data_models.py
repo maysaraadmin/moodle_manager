@@ -242,6 +242,42 @@ class Module(IModule):
         if content in self._contents:
             self._contents.remove(content)
             content.set_module(None)
+    
+    # Properties to satisfy abstract interface
+    @property
+    def filter_content(self) -> str:
+        """Property for filter content"""
+        return self.get_filter_content()
+    
+    @property
+    def id(self) -> int:
+        """Property for id"""
+        return self.get_id()
+    
+    @property
+    def mod_name(self) -> str:
+        """Property for mod_name"""
+        return self.get_mod_name()
+    
+    @property
+    def name(self) -> str:
+        """Property for name"""
+        return self.get_name()
+    
+    @name.setter
+    def name(self, value: str):
+        """Setter for name property"""
+        self.set_name(value)
+    
+    @property
+    def section(self) -> Optional[ISection]:
+        """Property for section"""
+        return self.get_section()
+    
+    @section.setter
+    def section(self, value: Optional[ISection]):
+        """Setter for section property"""
+        self.set_section(value)
 
 
 class Section(ISection):
@@ -288,6 +324,42 @@ class Section(ISection):
         if module in self._modules:
             self._modules.remove(module)
             module.set_section(None)
+    
+    # Properties to satisfy abstract interface
+    @property
+    def course(self) -> Optional[ICourse]:
+        """Property for course"""
+        return self.get_course()
+    
+    @course.setter
+    def course(self, value: Optional[ICourse]):
+        """Setter for course property"""
+        self.set_course(value)
+    
+    @property
+    def filter_content(self) -> str:
+        """Property for filter content"""
+        return self.get_filter_content()
+    
+    @property
+    def id(self) -> int:
+        """Property for id"""
+        return self.get_id()
+    
+    @property
+    def modules(self) -> List[IModule]:
+        """Property for modules"""
+        return self.get_modules()
+    
+    @property
+    def name(self) -> str:
+        """Property for name"""
+        return self.get_name()
+    
+    @name.setter
+    def name(self, value: str):
+        """Setter for name property"""
+        self.set_name(value)
 
 
 class Course(ICourse):
