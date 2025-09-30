@@ -6,13 +6,16 @@ Provides secure login interface with remember me functionality
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
                              QPushButton, QCheckBox, QGroupBox, QProgressBar, 
                              QMessageBox, QFrame, QSpacerItem, QSizePolicy, QTextEdit)
-from PyQt5.QtCore import Qt, pyqtSignal, QTimer
+from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
 from PyQt5.QtGui import QIcon, QFont, QPalette
 import logging
+import os
+import sys
 from typing import Optional, Dict, Any
 from datetime import datetime
 from auth_manager import AuthManager
 from connection_validator import ConnectionValidator
+from config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +32,11 @@ class LoginDialog(QDialog):
         super().__init__(parent)
         self.auth_manager = auth_manager or AuthManager("MoodleManager")
         self.connection_validator = ConnectionValidator(self.auth_manager)
+        self.config_manager = ConfigManager()
         self.connection_worker = None
         self.diagnostics_mode = False
         self.setup_ui()
+        self.load_config()
         self.load_saved_credentials()
         
     def setup_ui(self):
@@ -241,8 +246,92 @@ class LoginDialog(QDialog):
         except Exception as e:
             logger.error(f"Error loading saved credentials: {e}")
     
+    def load_config(self):
+        """Load configuration settings from config file"""
+        try:
+            # Load config from standard locations
+            config_path = os.path.join(os.path.dirname(sys.executable), 'config.ini')
+            if not os.path.exists(config_path):
+                config_path = os.path.join(os.path.dirname(__file__), 'config.ini')
+
+            if os.path.exists(config_path):
+                self.config_manager.load_config(config_path)
+                logger.info(f"Configuration loaded from {config_path}")
+
+                # Load first available LMS configuration
+                all_configs = self.config_manager.get_all_configs()
+                if all_configs:
+                    # Use the first configuration found
+                    first_config_section = list(all_configs.keys())[0]
+                    config = all_configs[first_config_section]
+
+                    # Pre-populate form fields with config values
+                    if config.url:
+                        self.host_input.setText(config.url)
+                    if config.username:
+                        self.username_input.setText(config.username)
+                    if config.service:
+                        self.service_input.setText(config.service)
+                    if config.remember_me:
+                        self.remember_me_checkbox.setChecked(True)
+
+                    logger.info(f"Pre-populated login form with config: {config.name}")
+                else:
+                    logger.info("No LMS configurations found in config file")
+            else:
+                logger.info("No configuration file found")
+
+        except Exception as e:
+            logger.error(f"Error loading configuration: {e}")
+
+    def load_saved_credentials(self):
+        """Load saved credentials if available"""
+        try:
+            # Get list of saved credentials
+            saved_credentials = self.auth_manager.get_all_credentials()
+            
+            if saved_credentials:
+                # If there's only one saved credential, auto-fill it
+                if len(saved_credentials) == 1:
+                    credential = list(saved_credentials.values())[0]
+                    host = credential.get('host', '')
+                    username = credential.get('username', '')
+                    service = credential.get('service', 'moodle_mobile_app')
+                    
+                    # Validate the credential format
+                    is_valid, validation_msg = self.auth_manager.validate_credentials_format(username, "dummy_password")
+                    if not is_valid and "Username cannot be empty" in validation_msg:
+                        # Invalid credentials found, clear them
+                        logger.warning(f"Found invalid stored credentials for {host}, clearing them")
+                        self.auth_manager.delete_credentials(host, username)
+                        QMessageBox.information(self, "Invalid Credentials", 
+                                              "Found invalid stored credentials. They have been cleared. Please login again.")
+                        return
+                    
+                    self.host_input.setText(host)
+                    self.username_input.setText(username)
+                    self.service_input.setText(service)
+                    self.remember_me_checkbox.setChecked(credential.get('remember_me', False))
+                    logger.info("Auto-filled saved credentials")
+                else:
+                    # Multiple credentials - don't auto-fill, let user choose
+                    logger.info(f"Found {len(saved_credentials)} saved credentials")
+            
+        except Exception as e:
+            # Handle credential decryption errors gracefully
+            if "Incorrect padding" in str(e) or "Failed to retrieve credentials" in str(e):
+                logger.warning(f"Corrupted credentials detected, clearing credential store: {e}")
+                # Clear all corrupted credentials and continue
+                try:
+                    # Try to clear the credential store
+                    self.auth_manager.clear_all_credentials()
+                except:
+                    pass  # Ignore errors when clearing
+                logger.info("Cleared corrupted credentials, user can login fresh")
+            else:
+                logger.error(f"Error loading saved credentials: {e}")
+    
     def validate_inputs(self) -> bool:
-        """Validate user inputs"""
         errors = []
         
         # Validate host
@@ -353,9 +442,9 @@ class LoginDialog(QDialog):
         self.comprehensive_test_thread = ComprehensiveTestThread(
             self.connection_validator, host, username, password, service
         )
-        self.comprehensive_test_thread.signals.finished.connect(self.on_comprehensive_test_finished)
-        self.comprehensive_test_thread.signals.error.connect(self.on_comprehensive_test_error)
-        self.comprehensive_test_thread.signals.progress.connect(self.on_test_progress)
+        self.comprehensive_test_thread.finished.connect(self.on_comprehensive_test_finished)
+        self.comprehensive_test_thread.error.connect(self.on_comprehensive_test_error)
+        self.comprehensive_test_thread.progress.connect(self.on_test_progress)
         self.comprehensive_test_thread.start()
         
         logger.info(f"Starting comprehensive connection test for {username}@{host}")
@@ -456,9 +545,9 @@ class LoginDialog(QDialog):
         self.comprehensive_test_thread = ComprehensiveTestThread(
             self.connection_validator, host, username, password, service
         )
-        self.comprehensive_test_thread.signals.finished.connect(self.on_connection_test_finished)
-        self.comprehensive_test_thread.signals.error.connect(self.on_comprehensive_test_error)
-        self.comprehensive_test_thread.signals.progress.connect(self.on_test_progress)
+        self.comprehensive_test_thread.finished.connect(self.on_connection_test_finished)
+        self.comprehensive_test_thread.error.connect(self.on_comprehensive_test_error)
+        self.comprehensive_test_thread.progress.connect(self.on_test_progress)
         self.comprehensive_test_thread.start()
     
     def on_connection_test_finished(self, test_result: Dict[str, Any]):
@@ -836,11 +925,10 @@ class LoginDialog(QDialog):
 class ComprehensiveTestThread(QThread):
     """Thread for running comprehensive connection tests"""
     
-    class Signals:
-        """Signal class for thread communication"""
-        finished = pyqtSignal(dict)  # Emits test result
-        error = pyqtSignal(str)  # Emits error message
-        progress = pyqtSignal(str)  # Emits progress updates
+    # Define signals as class attributes for PyQt5 compatibility
+    finished = pyqtSignal(dict)  # Emits test result
+    error = pyqtSignal(str)  # Emits error message
+    progress = pyqtSignal(str)  # Emits progress updates
     
     def __init__(self, connection_validator: ConnectionValidator, host: str, username: str, password: str, service: str):
         super().__init__()
@@ -849,12 +937,11 @@ class ComprehensiveTestThread(QThread):
         self.username = username
         self.password = password
         self.service = service
-        self.signals = self.Signals()
-    
+        
     def run(self):
         """Run comprehensive connection tests"""
         try:
-            self.signals.progress.emit("Validating connection parameters...")
+            self.progress.emit("Validating connection parameters...")
             
             # Validate parameters
             valid, errors = self.connection_validator.validate_connection_parameters(
@@ -867,10 +954,10 @@ class ComprehensiveTestThread(QThread):
                     'error_log': errors,
                     'recommendations': ['Please correct the parameter errors above']
                 }
-                self.signals.finished.emit(result)
+                self.finished.emit(result)
                 return
             
-            self.signals.progress.emit("Testing network connectivity...")
+            self.progress.emit("Testing network connectivity...")
             
             # Test network connectivity
             network_result = self.connection_validator.test_network_connectivity(self.host)
@@ -880,10 +967,10 @@ class ComprehensiveTestThread(QThread):
                     'error_log': network_result.get('error_log', ['Network connectivity test failed']),
                     'recommendations': network_result.get('recommendations', [])
                 }
-                self.signals.finished.emit(result)
+                self.finished.emit(result)
                 return
             
-            self.signals.progress.emit("Testing Moodle service availability...")
+            self.progress.emit("Testing Moodle service availability...")
             
             # Test Moodle service availability
             service_result = self.connection_validator.test_moodle_service(self.host)
@@ -893,10 +980,10 @@ class ComprehensiveTestThread(QThread):
                     'error_log': service_result.get('error_log', ['Moodle service test failed']),
                     'recommendations': service_result.get('recommendations', [])
                 }
-                self.signals.finished.emit(result)
+                self.finished.emit(result)
                 return
             
-            self.signals.progress.emit("Testing authentication...")
+            self.progress.emit("Testing authentication...")
             
             # Test authentication
             auth_result = self.connection_validator.test_authentication(
@@ -909,7 +996,7 @@ class ComprehensiveTestThread(QThread):
                     'error_log': auth_result.get('error_log', ['Authentication test failed']),
                     'recommendations': auth_result.get('recommendations', [])
                 }
-                self.signals.finished.emit(result)
+                self.finished.emit(result)
                 return
             
             # All tests passed
@@ -925,10 +1012,10 @@ class ComprehensiveTestThread(QThread):
                 }
             }
             
-            self.signals.progress.emit("All tests completed successfully!")
-            self.signals.finished.emit(result)
+            self.progress.emit("All tests completed successfully!")
+            self.finished.emit(result)
             
         except Exception as e:
             error_msg = f"Comprehensive test error: {str(e)}"
             logger.error(error_msg, exc_info=True)
-            self.signals.error.emit(error_msg)
+            self.error.emit(error_msg)
