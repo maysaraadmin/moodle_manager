@@ -23,7 +23,7 @@ from dialogs.lms_dialog import LMSDialog
 from dialogs.settings_dialog import SettingsDialog
 from login_dialog import LoginDialog
 from auth_manager import AuthManager
-from database_manager import DatabaseManager
+from database_only_manager import DatabaseOnlyManager
 
 
 class MainWindow(QMainWindow):
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.lms_interface = LMS()
         self.config_manager = ConfigManager()
         self.auth_manager = AuthManager("MoodleManager")
-        self.database_manager = DatabaseManager()
+        self.database_manager = DatabaseOnlyManager()
         
         self.init_ui()
         self.load_config()
@@ -869,7 +869,7 @@ class MainWindow(QMainWindow):
                             server_id=server_id,
                             server_type='moodle',
                             username=username,
-                            password="",  # Password is managed by AuthManager
+                            password=password,  # Password is stored encrypted in database
                             is_remembered=remember_me
                         )
 
@@ -923,11 +923,21 @@ class MainWindow(QMainWindow):
         self.lms_interface.set_host(config.url)
         self.lms_interface.set_name(config.name)
         
-        # Try to get stored credentials from AuthManager first
-        stored_credentials = self.auth_manager.get_credentials(config.url, config.username)
-        
+        # Try to get stored credentials from database first
+        # First get the server ID by URL
+        server_id = None
+        moodle_servers = self.database_manager.get_all_moodle_servers()
+        for server in moodle_servers:
+            if server['host'] == config.url:
+                server_id = server['id']
+                break
+
+        stored_credentials = None
+        if server_id:
+            stored_credentials = self.database_manager.get_credentials(server_id, 'moodle', config.username)
+
         if stored_credentials:
-            # Use stored credentials
+            # Use stored credentials from database
             password = stored_credentials.get('password', '')
             if password:  # Only attempt connection if we have a valid password
                 if self.lms_interface.connect(config.username, password, config.service):

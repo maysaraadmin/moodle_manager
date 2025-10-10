@@ -21,7 +21,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QToolBox, QStackedWidget
                              QTreeWidget, QTreeWidgetItem, QSplitter, QGroupBox,
                              QCheckBox, QSpinBox, QFileDialog, QInputDialog,
                              QHeaderView, QTabWidget, QListWidget, QListWidgetItem)
-from database_manager import DatabaseManager
+from database_only_manager import DatabaseOnlyManager
 
 
 # ==========================================
@@ -30,8 +30,8 @@ from database_manager import DatabaseManager
 class FastAPIServerManager:
     """Manages FastAPI server processes and configurations"""
 
-    def __init__(self, database_manager: DatabaseManager = None):
-        self.database_manager = database_manager or DatabaseManager()
+    def __init__(self, database_manager: DatabaseOnlyManager = None):
+        self.database_manager = database_manager or DatabaseOnlyManager()
         self.processes = {}
         self.load_servers_from_database()
 
@@ -295,7 +295,7 @@ class FastAPIManager(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.database_manager = DatabaseManager()
+        self.database_manager = DatabaseOnlyManager()
         self.server_manager = FastAPIServerManager(self.database_manager)
         self.log_monitor = LogMonitor(self.server_manager)
         self.settings = QSettings('FastAPIManager', 'FastAPIManager')

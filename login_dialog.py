@@ -8,15 +8,15 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdi
                              QMessageBox, QFrame, QSpacerItem, QSizePolicy, QTextEdit)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
 from PyQt5.QtGui import QIcon, QFont, QPalette
-import os
 import sys
 import logging
 import requests
 from typing import Optional, Dict, Any
 from datetime import datetime
-from auth_manager import AuthManager
+from database_only_manager import DatabaseOnlyManager
 from connection_validator import ConnectionValidator
 from config_manager import ConfigManager
+from auth_manager import AuthManager
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,7 @@ class LoginDialog(QDialog):
         super().__init__()
         self.auth_manager = auth_manager or AuthManager("MoodleManager")
         self.config_manager = ConfigManager()
+        self.database_manager = DatabaseOnlyManager()
         self.connection_validator = ConnectionValidator(self.auth_manager)
         self.connection_worker = None
         self.diagnostics_mode = False
@@ -286,49 +287,44 @@ class LoginDialog(QDialog):
     def load_saved_credentials(self):
         """Load saved credentials if available"""
         try:
-            # Get list of saved credentials
-            saved_credentials = self.auth_manager.get_all_credentials()
-            
-            if saved_credentials:
-                # If there's only one saved credential, auto-fill it
-                if len(saved_credentials) == 1:
-                    credential = list(saved_credentials.values())[0]
-                    host = credential.get('host', '')
-                    username = credential.get('username', '')
-                    service = credential.get('service', 'moodle_mobile_app')
-                    
-                    # Validate the credential format
-                    is_valid, validation_msg = self.auth_manager.validate_credentials_format(username, "dummy_password")
-                    if not is_valid and "Username cannot be empty" in validation_msg:
-                        # Invalid credentials found, clear them
-                        logger.warning(f"Found invalid stored credentials for {host}, clearing them")
-                        self.auth_manager.delete_credentials(host, username)
-                        QMessageBox.information(self, "Invalid Credentials", 
-                                              "Found invalid stored credentials. They have been cleared. Please login again.")
-                        return
-                    
-                    self.host_input.setText(host)
-                    self.username_input.setText(username)
-                    self.service_input.setText(service)
-                    self.remember_me_checkbox.setChecked(credential.get('remember_me', False))
-                    logger.info("Auto-filled saved credentials")
-                else:
-                    # Multiple credentials - don't auto-fill, let user choose
-                    logger.info(f"Found {len(saved_credentials)} saved credentials")
-            
+            # Get list of saved credentials from database
+            # Try to get the server ID by URL from form
+            host = self.host_input.text().strip()
+            if not host:
+                return
+
+            # Find server ID by host URL
+            server_id = None
+            moodle_servers = self.database_manager.get_all_moodle_servers()
+            for server in moodle_servers:
+                if server['host'] == host:
+                    server_id = server['id']
+                    break
+
+            if server_id:
+                saved_credentials = self.database_manager.get_all_credentials_for_server(server_id, 'moodle')
+
+                if saved_credentials:
+                    # If there's only one saved credential, auto-fill it
+                    if len(saved_credentials) == 1:
+                        credential = saved_credentials[0]
+                        username = credential.get('username', '')
+                        service = 'moodle_mobile_app'  # Default service
+
+                        # Validate the credential format
+                        if username:  # Only auto-fill if we have a valid username
+                            self.username_input.setText(username)
+                            self.service_input.setText(service)
+                            self.remember_me_checkbox.setChecked(credential.get('is_remembered', False))
+                            logger.info("Auto-filled saved credentials from database")
+                        else:
+                            logger.info("No valid stored credentials found")
+                    else:
+                        # Multiple credentials - don't auto-fill, let user choose
+                        logger.info(f"Found {len(saved_credentials)} saved credentials in database")
+
         except Exception as e:
-            # Handle credential decryption errors gracefully
-            if "Incorrect padding" in str(e) or "Failed to retrieve credentials" in str(e):
-                logger.warning(f"Corrupted credentials detected, clearing credential store: {e}")
-                # Clear all corrupted credentials and continue
-                try:
-                    # Try to clear the credential store
-                    self.auth_manager.clear_all_credentials()
-                except:
-                    pass  # Ignore errors when clearing
-                logger.info("Cleared corrupted credentials, user can login fresh")
-            else:
-                logger.error(f"Error loading saved credentials: {e}")
+            logger.error(f"Error loading saved credentials: {e}")
     
     def validate_inputs(self) -> bool:
         errors = []
@@ -739,13 +735,19 @@ class LoginDialog(QDialog):
             # Store credentials if remember me is checked
             if remember_me:
                 self.status_label.setText("Securing your credentials...")
-                success = self.auth_manager.store_credentials(host, username, password, service, remember_me)
+                success = self.database_manager.save_credentials(
+                    server_id=server_id,
+                    server_type='moodle',
+                    username=username,
+                    password=password,  # Password stored encrypted in database
+                    is_remembered=remember_me
+                )
                 if success:
                     self.credentials_stored.emit(True)
-                    logger.info("Credentials stored successfully")
+                    logger.info("Credentials stored successfully in database")
                 else:
                     self.credentials_stored.emit(False)
-                    logger.warning("Failed to store credentials")
+                    logger.warning("Failed to store credentials in database")
             
             # Create session
             self.status_label.setText("Creating secure session...")
