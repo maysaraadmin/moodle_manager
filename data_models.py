@@ -1347,3 +1347,254 @@ def get_global_network() -> LMSNetwork:
     if _global_lms_network is None:
         _global_lms_network = LMSNetwork()
     return _global_lms_network
+
+
+# API Response Models
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel
+
+
+class MoodleAPIResponse(BaseModel):
+    """Standard response model for Moodle API operations"""
+    success: bool
+    data: Optional[Any] = None
+    message: Optional[str] = None
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response model for API errors"""
+    success: bool
+    error_code: str
+    message: str
+    moodle_error: Optional[str] = None
+    suggestions: List[str] = []
+    request_id: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+
+# Additional Model Classes for API
+class Group(BaseModel):
+    """Group model"""
+    id: int
+    name: str
+    description: Optional[str] = None
+
+
+class Enrollment(BaseModel):
+    """Enrollment model"""
+    id: int
+    user_id: int
+    course_id: int
+    role_id: int
+
+
+class Grade(BaseModel):
+    """Grade model"""
+    id: int
+    user_id: int
+    grade_item_id: int
+    grade_value: float
+
+
+class Role(BaseModel):
+    """Role model"""
+    id: int
+    name: str
+    shortname: str
+
+
+class AssignmentSubmission(BaseModel):
+    """Assignment submission model"""
+    id: int
+    assignment_id: int
+    user_id: int
+    status: str
+    submitted_date: Optional[int] = None
+
+
+class CalendarEvent(BaseModel):
+    """Calendar event model"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    event_type: str
+    course_id: Optional[int] = None
+    start_date: int
+    end_date: int
+
+
+class Message(BaseModel):
+    """Message model"""
+    id: int
+    user_id_from: int
+    user_id_to: int
+    subject: str
+    message: str
+    time_created: int
+
+
+class FileInfo(BaseModel):
+    """File info model"""
+    id: int
+    file_name: str
+    file_path: str
+    file_size: int
+    mime_type: str
+
+
+# Moodle API Request Models
+class MoodleUserCreateRequest(BaseModel):
+    """Request model for creating Moodle users"""
+    username: str
+    password: str
+    firstname: str
+    lastname: str
+    email: str
+    auth: Optional[str] = "manual"
+    idnumber: Optional[str] = None
+    lang: Optional[str] = "en"
+    calendartype: Optional[str] = "gregorian"
+    theme: Optional[str] = None
+    timezone: Optional[str] = "UTC"
+    mailformat: Optional[int] = 1
+    description: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    preferences: Optional[List[Dict[str, Any]]] = None
+
+
+class MoodleUserUpdateRequest(BaseModel):
+    """Request model for updating Moodle users"""
+    username: Optional[str] = None
+    firstname: Optional[str] = None
+    lastname: Optional[str] = None
+    email: Optional[str] = None
+    auth: Optional[str] = None
+    idnumber: Optional[str] = None
+    lang: Optional[str] = None
+    calendartype: Optional[str] = None
+    theme: Optional[str] = None
+    timezone: Optional[str] = None
+    mailformat: Optional[int] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    preferences: Optional[List[Dict[str, Any]]] = None
+
+
+class MoodleCourseCreateRequest(BaseModel):
+    """Request model for creating Moodle courses"""
+    fullname: str
+    shortname: str
+    categoryid: int
+    idnumber: Optional[str] = None
+    summary: Optional[str] = None
+    format: Optional[str] = "topics"
+    showgrades: Optional[int] = 1
+    newsitems: Optional[int] = 5
+    startdate: Optional[int] = None
+    enddate: Optional[int] = None
+    numsections: Optional[int] = 10
+    maxbytes: Optional[int] = 0
+    showreports: Optional[int] = 0
+    visible: Optional[int] = 1
+    groupmode: Optional[int] = 0
+    groupmodeforce: Optional[int] = 0
+    defaultgroupingid: Optional[int] = 0
+    enablecompletion: Optional[int] = 0
+    completionnotify: Optional[int] = 0
+    lang: Optional[str] = None
+    forcetheme: Optional[str] = None
+
+
+class MoodleCourseUpdateRequest(BaseModel):
+    """Request model for updating Moodle courses"""
+    fullname: Optional[str] = None
+    shortname: Optional[str] = None
+    categoryid: Optional[int] = None
+    idnumber: Optional[str] = None
+    summary: Optional[str] = None
+    format: Optional[str] = None
+    showgrades: Optional[int] = None
+    newsitems: Optional[int] = None
+    startdate: Optional[int] = None
+    enddate: Optional[int] = None
+    numsections: Optional[int] = None
+    maxbytes: Optional[int] = None
+    showreports: Optional[int] = None
+    visible: Optional[int] = None
+    groupmode: Optional[int] = None
+    groupmodeforce: Optional[int] = None
+    defaultgroupingid: Optional[int] = None
+    enablecompletion: Optional[int] = None
+    completionnotify: Optional[int] = None
+    lang: Optional[str] = None
+    forcetheme: Optional[str] = None
+
+
+class MoodleGroupCreateRequest(BaseModel):
+    """Request model for creating Moodle groups"""
+    courseid: int
+    name: str
+    description: Optional[str] = None
+    enrolmentkey: Optional[str] = None
+
+
+class MoodleEnrollmentRequest(BaseModel):
+    """Request model for Moodle enrollments"""
+    roleid: int
+    userid: int
+    courseid: int
+    timestart: Optional[int] = None
+    timeend: Optional[int] = None
+    suspend: Optional[int] = 0
+
+
+class MoodleGradeUpdateRequest(BaseModel):
+    """Request model for updating Moodle grades"""
+    studentid: int
+    gradeitemid: int
+    grade: float
+    feedback: Optional[str] = None
+
+
+class MoodleRoleAssignmentRequest(BaseModel):
+    """Request model for Moodle role assignments"""
+    roleid: int
+    userid: int
+    contextid: int
+    contextlevel: str
+    instanceid: int
+
+
+class MoodleMessageRequest(BaseModel):
+    """Request model for Moodle messages"""
+    touserid: int
+    subject: str
+    message: str
+
+
+class MoodleFileUploadRequest(BaseModel):
+    """Request model for Moodle file uploads"""
+    component: str
+    filearea: str
+    itemid: int
+    filepath: str
+    filename: str
+    filecontent: str  # Base64 encoded
+
+
+class MoodleCalendarEventRequest(BaseModel):
+    """Request model for Moodle calendar events"""
+    name: str
+    description: Optional[str] = None
+    eventtype: str
+    courseid: Optional[int] = None
+    groupid: Optional[int] = None
+    userid: Optional[int] = None
+    starttime: int
+    endtime: int
+    timeduration: Optional[int] = None
+    visible: Optional[int] = 1
+    sequence: Optional[int] = 1

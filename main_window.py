@@ -6,6 +6,7 @@ Enhanced UI with modern styling and improved functionality
 import os
 import sys
 import logging
+import webbrowser
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QMenuBar, QMenu, QAction, QStatusBar, QSplitter,
                              QLineEdit, QPushButton, QTreeWidget, QTreeWidgetItem,
@@ -22,8 +23,8 @@ from dialogs.lms_dialog import LMSDialog
 from dialogs.settings_dialog import SettingsDialog
 from login_dialog import LoginDialog
 from auth_manager import AuthManager
+from database_manager import DatabaseManager
 
-logger = logging.getLogger(__name__)
 
 class MainWindow(QMainWindow):
     """Main application window"""
@@ -33,6 +34,7 @@ class MainWindow(QMainWindow):
         self.lms_interface = LMS()
         self.config_manager = ConfigManager()
         self.auth_manager = AuthManager("MoodleManager")
+        self.database_manager = DatabaseManager()
         
         self.init_ui()
         self.load_config()
@@ -96,6 +98,15 @@ class MainWindow(QMainWindow):
         export_action.setToolTip("Export courses and users to Excel/CSV")
         export_action.triggered.connect(self.on_export)
         toolbar.addAction(export_action)
+
+        toolbar.addSeparator()
+
+        # Browser section
+        browser_action = QAction("🌐 Browser", self)
+        browser_action.setStatusTip("Open Moodle in browser")
+        browser_action.setToolTip("Open Moodle instance in web browser")
+        browser_action.triggered.connect(self.on_open_browser)
+        toolbar.addAction(browser_action)
 
         toolbar.addSeparator()
 
@@ -361,6 +372,29 @@ class MainWindow(QMainWindow):
         elif filter_type == "user":
             self.filter_edit.setText("user:")
         self.filter_edit.setFocus()
+
+    def on_open_browser(self):
+        """Handle browser action - open Moodle in web browser"""
+        try:
+            # Default Moodle URL
+            moodle_url = "http://127.0.0.1/moodle/"
+
+            # Try to get the configured URL from the LMS interface if connected
+            if self.lms_interface and hasattr(self.lms_interface, 'get_host'):
+                configured_host = self.lms_interface.get_host()
+                if configured_host:
+                    moodle_url = configured_host
+
+            # Open URL in default web browser
+            webbrowser.open(moodle_url)
+
+            # Show status message
+            self.statusBar().showMessage(f"Opening Moodle in browser: {moodle_url}", 3000)
+
+        except Exception as e:
+            QMessageBox.warning(self, "Browser Error",
+                              f"Failed to open Moodle in browser: {str(e)}")
+            self.statusBar().showMessage("Failed to open Moodle in browser", 3000)
 
     def on_export(self):
         """Handle export action"""
@@ -819,6 +853,35 @@ class MainWindow(QMainWindow):
                 # Update the network tree with loaded data
                 self.network_tree.set_lms(self.lms_interface)
                 
+                # Save server configuration to database
+                server_id = self.database_manager.save_moodle_server(
+                    name="Moodle",
+                    host=host,
+                    port=80,  # Default Moodle port
+                    service_name=service,
+                    description=f"Moodle instance at {host}"
+                )
+
+                if server_id > 0:
+                    # Save credentials if remember me is checked
+                    if remember_me:
+                        self.database_manager.save_credentials(
+                            server_id=server_id,
+                            server_type='moodle',
+                            username=username,
+                            password="",  # Password is managed by AuthManager
+                            is_remembered=remember_me
+                        )
+
+                    # Log successful connection
+                    self.database_manager.log_connection(
+                        server_id=server_id,
+                        server_type='moodle',
+                        success=True,
+                        response_time_ms=0,  # Could be enhanced to measure actual time
+                        user_agent="MoodleManager/1.0"
+                    )
+
                 # Save configuration
                 self.config_manager.add_config(
                     name="Moodle",

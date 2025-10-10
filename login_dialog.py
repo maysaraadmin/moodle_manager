@@ -8,9 +8,10 @@ from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdi
                              QMessageBox, QFrame, QSpacerItem, QSizePolicy, QTextEdit)
 from PyQt5.QtCore import Qt, pyqtSignal, QTimer, QThread
 from PyQt5.QtGui import QIcon, QFont, QPalette
-import logging
 import os
 import sys
+import logging
+import requests
 from typing import Optional, Dict, Any
 from datetime import datetime
 from auth_manager import AuthManager
@@ -21,18 +22,16 @@ logger = logging.getLogger(__name__)
 
 
 class LoginDialog(QDialog):
-    """Enhanced login dialog with remember me functionality"""
     
-    # Signals
     login_successful = pyqtSignal(dict)  # Emits connection details
     login_failed = pyqtSignal(str)  # Emits error message
     credentials_stored = pyqtSignal(bool)  # Emits whether credentials were stored
     
     def __init__(self, parent=None, auth_manager: AuthManager = None):
-        super().__init__(parent)
+        super().__init__()
         self.auth_manager = auth_manager or AuthManager("MoodleManager")
-        self.connection_validator = ConnectionValidator(self.auth_manager)
         self.config_manager = ConfigManager()
+        self.connection_validator = ConnectionValidator(self.auth_manager)
         self.connection_worker = None
         self.diagnostics_mode = False
         self.setup_ui()
@@ -360,8 +359,87 @@ class LoginDialog(QDialog):
             QMessageBox.warning(self, "Validation Error", "\n".join(errors))
             return False
         
-        return True
-    
+    def quick_validate_connection(self, host: str, username: str, password: str, service: str) -> bool:
+        """Quick validation of URL accessibility and credential correctness"""
+        try:
+            # Step 1: Test basic URL accessibility
+            self.status_label.setText("Testing Moodle URL accessibility...")
+            self.status_label.setStyleSheet("color: #1976d2;")
+            self.status_label.setVisible(True)
+
+            try:
+                # Test if we can reach the Moodle server
+                response = requests.get(host, timeout=5)
+                if response.status_code != 200:
+                    QMessageBox.warning(self, "URL Not Accessible",
+                                      f"Cannot access Moodle server at {host}.\n\nHTTP Status: {response.status_code}\n\nPlease check:\n• Moodle server is running\n• URL is correct\n• Network connection is working")
+                    return False
+            except requests.exceptions.ConnectionError:
+                QMessageBox.warning(self, "Connection Error",
+                                  f"Cannot connect to Moodle server at {host}.\n\nPlease check:\n• Moodle server is running\n• URL is correct\n• Firewall settings\n• Network connectivity")
+                return False
+            except requests.exceptions.Timeout:
+                QMessageBox.warning(self, "Connection Timeout",
+                                  f"Connection to Moodle server at {host} timed out.\n\nPlease check:\n• Moodle server is responding\n• Network connection is stable\n• Server is not overloaded")
+                return False
+            except Exception as e:
+                QMessageBox.warning(self, "URL Test Error",
+                                  f"Error testing Moodle URL {host}:\n\n{str(e)}\n\nPlease check your connection and try again.")
+                return False
+
+            # Step 2: Test credential validity
+            self.status_label.setText("Validating credentials...")
+
+            # Try to get a token to validate credentials
+            token_url = f"{host}/login/token.php"
+            token_data = {
+                'username': username,
+                'password': password,
+                'service': service
+            }
+
+            try:
+                token_response = requests.post(token_url, data=token_data, timeout=10)
+
+                if token_response.status_code == 200:
+                    token_result = token_response.json()
+
+                    if 'token' in token_result:
+                        # Credentials are valid
+                        self.status_label.setText("Credentials validated successfully!")
+                        self.status_label.setStyleSheet("color: #4caf50;")
+                        QTimer.singleShot(1000, lambda: self.status_label.setVisible(False))
+                        return True
+                    else:
+                        # Invalid credentials
+                        error_msg = token_result.get('error', 'Invalid credentials')
+                        QMessageBox.warning(self, "Invalid Credentials",
+                                          f"Username or password is incorrect.\n\nError: {error_msg}\n\nPlease check:\n• Username is correct\n• Password is correct\n• Account is active\n• Caps Lock is off")
+                        return False
+                else:
+                    QMessageBox.warning(self, "Authentication Error",
+                                      f"Authentication service error (HTTP {token_response.status_code}).\n\nPlease check:\n• Moodle web services are enabled\n• Service name is correct\n• User has web service permissions")
+                    return False
+
+            except requests.exceptions.ConnectionError:
+                QMessageBox.warning(self, "Connection Error",
+                                  "Cannot connect to Moodle authentication service.\n\nPlease check your connection and Moodle server status.")
+                return False
+            except requests.exceptions.Timeout:
+                QMessageBox.warning(self, "Timeout Error",
+                                  "Authentication request timed out.\n\nPlease check Moodle server performance.")
+                return False
+            except Exception as e:
+                QMessageBox.warning(self, "Authentication Test Error",
+                                  f"Error testing authentication:\n\n{str(e)}\n\nPlease try again or contact your administrator.")
+                return False
+
+        except Exception as e:
+            logger.error(f"Quick validation error: {e}")
+            QMessageBox.critical(self, "Validation Error",
+                               f"An unexpected error occurred during validation:\n\n{str(e)}")
+            return False
+
     def attempt_login(self):
         """Attempt to login with provided credentials"""
         if not self.validate_inputs():
@@ -373,6 +451,10 @@ class LoginDialog(QDialog):
         password = self.password_input.text()
         service = self.service_input.text().strip()
         remember_me = self.remember_me_checkbox.isChecked()
+        
+        # Pre-validate URL and credentials before full authentication
+        if not self.quick_validate_connection(host, username, password, service):
+            return
         
         # Check if MFA is required
         mfa_status = self.auth_manager.get_mfa_status(host, username)
