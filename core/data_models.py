@@ -1,0 +1,1623 @@
+"""
+Data Model Classes for LMS Explorer
+Concrete implementations of the LMS interface classes
+"""
+
+import os
+import sys
+
+# Add the project root to the Python path
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, project_root)
+
+from typing import List, Optional
+from services.moodle.lms_interface import (ILMS, IUser, ICourse, ICategory, IModule, ISection, 
+                           IGradeItem, IUsersGroup, IContent)
+
+
+class GradeItem(IGradeItem):
+    """Concrete implementation of grade item"""
+    
+    def __init__(self, item_name: str = ""):
+        self._item_name = item_name
+    
+    def get_item_name(self) -> str:
+        return self._item_name
+    
+    def set_item_name(self, value: str):
+        self._item_name = value
+
+
+class UsersGroup(IUsersGroup):
+    """Concrete implementation of user group"""
+    
+    def __init__(self, group_name: str = "", group_id: int = 0):
+        self._group_name = group_name
+        self._id = group_id
+        self._users_in_group: List[IUser] = []
+        self._filter_content = ""
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._group_name} {self._id}"
+        return self._filter_content
+    
+    def get_group_name(self) -> str:
+        return self._group_name
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_users_in_group(self) -> List[IUser]:
+        return self._users_in_group
+    
+    def set_group_name(self, value: str):
+        self._group_name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_id(self, value: int):
+        self._id = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_users_in_group(self, value: List[IUser]):
+        self._users_in_group = value
+
+
+class User(IUser):
+    """Concrete implementation of user"""
+    
+    def __init__(self, user_id: int = 0, first_name: str = "", last_name: str = "", 
+                 email: str = ""):
+        self._id = user_id
+        self._first_name = first_name
+        self._last_name = last_name
+        self._email = email
+        self._username = ""
+        self._full_name = ""
+        self._course: Optional[ICourse] = None
+        self._lms: Optional[ILMS] = None
+        self._roles: List[str] = []
+        self._other_enrolled_courses: List[ICourse] = []
+        self._last_access = ""
+        self._last_access_from = ""
+        self._time_created = ""
+        self._time_modified = ""
+        self._notes = ""
+        self._filter_content = ""
+    
+    def get_course(self) -> Optional[ICourse]:
+        return self._course
+    
+    def get_email(self) -> str:
+        return self._email
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._first_name} {self._last_name} {self._full_name} {self._username} {self._email} {self._id}"
+        return self._filter_content
+    
+    def get_first_name(self) -> str:
+        return self._first_name
+    
+    def get_full_name(self) -> str:
+        if self._full_name:
+            return self._full_name
+        return f"{self._first_name} {self._last_name}"
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_last_name(self) -> str:
+        return self._last_name
+    
+    def get_lms(self) -> Optional[ILMS]:
+        return self._lms
+    
+    def get_roles(self) -> List[str]:
+        return self._roles
+    
+    def set_course(self, value: Optional[ICourse]):
+        self._course = value
+    
+    def set_email(self, value: str):
+        self._email = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_first_name(self, value: str):
+        self._first_name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_full_name(self, value: str):
+        self._full_name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_last_name(self, value: str):
+        self._last_name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_lms(self, value: Optional[ILMS]):
+        self._lms = value
+    
+    def set_roles(self, value: List[str]):
+        self._roles = value
+        self._filter_content = ""  # Reset filter content
+    
+    def get_username(self) -> str:
+        return self._username
+    
+    def set_username(self, value: str):
+        self._username = value
+        self._filter_content = ""  # Reset filter content
+    
+    def get_other_enrolled_courses(self) -> List[ICourse]:
+        return self._other_enrolled_courses
+    
+    def get_last_access(self) -> str:
+        return self._last_access
+    
+    def set_last_access(self, value: str):
+        self._last_access = value
+    
+    def get_last_access_from(self) -> str:
+        return self._last_access_from
+    
+    def set_last_access_from(self, value: str):
+        self._last_access_from = value
+    
+    def get_time_created(self) -> str:
+        return self._time_created
+    
+    def set_time_created(self, value: str):
+        self._time_created = value
+    
+    def get_time_modified(self) -> str:
+        return self._time_modified
+    
+    def set_time_modified(self, value: str):
+        self._time_modified = value
+    
+    def get_notes(self) -> str:
+        return self._notes
+    
+    def set_notes(self, value: str):
+        self._notes = value
+    
+    # Properties to match IUser interface
+    course = property(get_course, set_course)
+    email = property(get_email, set_email)
+    filter_content = property(get_filter_content)
+    first_name = property(get_first_name, set_first_name)
+    full_name = property(get_full_name)
+    id = property(get_id)
+    last_name = property(get_last_name, set_last_name)
+    lms = property(get_lms, set_lms)
+    roles = property(get_roles, set_roles)
+
+
+class Module(IModule):
+    """Concrete implementation of module"""
+    
+    def __init__(self, module_id: int = 0, mod_name: str = "", name: str = ""):
+        self._id = module_id
+        self._mod_name = mod_name
+        self._name = name
+        self._section: Optional[ISection] = None
+        self._contents: List[IContent] = []
+        self._mod_type = "unknow"  # Default to unknown module type
+        self._filter_content = ""
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._name} {self._mod_name}"
+        return self._filter_content
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_mod_name(self) -> str:
+        return self._mod_name
+    
+    def get_name(self) -> str:
+        return self._name
+    
+    def get_section(self) -> Optional[ISection]:
+        return self._section
+    
+    def set_name(self, value: str):
+        self._name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_section(self, value: Optional[ISection]):
+        self._section = value
+    
+    def get_contents(self) -> List[IContent]:
+        return self._contents
+    
+    def get_mod_type(self) -> str:
+        return self._mod_type
+    
+    def set_mod_type(self, value: str):
+        self._mod_type = value
+    
+    def add_content(self, content: IContent):
+        """Add content to this module"""
+        content.set_module(self)
+        self._contents.append(content)
+    
+    def remove_content(self, content: IContent):
+        """Remove content from this module"""
+        if content in self._contents:
+            self._contents.remove(content)
+            content.set_module(None)
+    
+    # Properties to satisfy abstract interface
+    @property
+    def filter_content(self) -> str:
+        """Property for filter content"""
+        return self.get_filter_content()
+    
+    @property
+    def id(self) -> int:
+        """Property for id"""
+        return self.get_id()
+    
+    @property
+    def mod_name(self) -> str:
+        """Property for mod_name"""
+        return self.get_mod_name()
+    
+    @property
+    def name(self) -> str:
+        """Property for name"""
+        return self.get_name()
+    
+    @name.setter
+    def name(self, value: str):
+        """Setter for name property"""
+        self.set_name(value)
+    
+    @property
+    def section(self) -> Optional[ISection]:
+        """Property for section"""
+        return self.get_section()
+    
+    @section.setter
+    def section(self, value: Optional[ISection]):
+        """Setter for section property"""
+        self.set_section(value)
+
+
+class Section(ISection):
+    """Concrete implementation of section"""
+    
+    def __init__(self, section_id: int = 0, name: str = ""):
+        self._id = section_id
+        self._name = name
+        self._course: Optional[ICourse] = None
+        self._modules: List[IModule] = []
+        self._filter_content = ""
+    
+    def get_course(self) -> ICourse:
+        return self._course
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._name} {self._id}"
+        return self._filter_content
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_modules(self) -> List[IModule]:
+        return self._modules
+    
+    def get_name(self) -> str:
+        return self._name
+    
+    def set_name(self, value: str):
+        self._name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_course(self, value: ICourse):
+        self._course = value
+    
+    def add_module(self, module: IModule):
+        """Add a module to this section"""
+        module.set_section(self)
+        self._modules.append(module)
+    
+    def remove_module(self, module: IModule):
+        """Remove a module from this section"""
+        if module in self._modules:
+            self._modules.remove(module)
+            module.set_section(None)
+    
+    # Properties to satisfy abstract interface
+    @property
+    def course(self) -> Optional[ICourse]:
+        """Property for course"""
+        return self.get_course()
+    
+    @course.setter
+    def course(self, value: Optional[ICourse]):
+        """Setter for course property"""
+        self.set_course(value)
+    
+    @property
+    def filter_content(self) -> str:
+        """Property for filter content"""
+        return self.get_filter_content()
+    
+    @property
+    def id(self) -> int:
+        """Property for id"""
+        return self.get_id()
+    
+    @property
+    def modules(self) -> List[IModule]:
+        """Property for modules"""
+        return self.get_modules()
+    
+    @property
+    def name(self) -> str:
+        """Property for name"""
+        return self.get_name()
+    
+    @name.setter
+    def name(self, value: str):
+        """Setter for name property"""
+        self.set_name(value)
+
+
+class Course(ICourse):
+    """Concrete implementation of course"""
+    
+    def __init__(self, course_id: int = 0, name: str = ""):
+        self._id = course_id
+        self._name = name
+        self._display_name = name
+        self._full_name = name
+        self._short_name = ""
+        self._category: Optional[ICategory] = None
+        self._lms: Optional[ILMS] = None
+        self._enrolled_users: List[IUser] = []
+        self._user_groups: List[IUsersGroup] = []
+        self._grade_items: List[IGradeItem] = []
+        self._course_content: List[ISection] = []
+        self._course_roles: List[str] = []
+        self._group_mode = 0
+        self._start_date = ""
+        self._end_date = ""
+        self._time_created = ""
+        self._time_modified = ""
+        self._filter_content = ""
+    
+    def get_category(self) -> Optional[ICategory]:
+        return self._category
+    
+    def get_course_content(self) -> List[ISection]:
+        return self._course_content
+    
+    def get_course_roles(self) -> List[str]:
+        return self._course_roles
+    
+    def get_enrolled_users(self) -> List[IUser]:
+        return self._enrolled_users
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._name} {self._id}"
+        return self._filter_content
+    
+    def get_grade_items(self) -> List[IGradeItem]:
+        return self._grade_items
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_lms(self) -> Optional[ILMS]:
+        return self._lms
+    
+    def get_name(self) -> str:
+        return self._name
+    
+    def get_user_groups(self) -> List[IUsersGroup]:
+        return self._user_groups
+    
+    def set_category(self, value: Optional[ICategory]):
+        self._category = value
+    
+    def set_lms(self, value: Optional[ILMS]):
+        self._lms = value
+    
+    def set_name(self, value: str):
+        self._name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def add_enrolled_user(self, user: IUser):
+        """Add an enrolled user to the course"""
+        user.set_course(self)
+        self._enrolled_users.append(user)
+    
+    def remove_enrolled_user(self, user: IUser):
+        """Remove an enrolled user from the course"""
+        if user in self._enrolled_users:
+            self._enrolled_users.remove(user)
+            user.set_course(None)
+    
+    def add_user_group(self, group: IUsersGroup):
+        """Add a user group to the course"""
+        self._user_groups.append(group)
+    
+    def remove_user_group(self, group: IUsersGroup):
+        """Remove a user group from the course"""
+        if group in self._user_groups:
+            self._user_groups.remove(group)
+    
+    def add_grade_item(self, item: IGradeItem):
+        """Add a grade item to the course"""
+        self._grade_items.append(item)
+    
+    def remove_grade_item(self, item: IGradeItem):
+        """Remove a grade item from the course"""
+        if item in self._grade_items:
+            self._grade_items.remove(item)
+    
+    def add_section(self, section: ISection):
+        """Add a section to the course content"""
+        section.set_course(self)
+        self._course_content.append(section)
+    
+    def remove_section(self, section: ISection):
+        """Remove a section from the course content"""
+        if section in self._course_content:
+            self._course_content.remove(section)
+    
+    def get_course_content_from_lms(self):
+        """Get course content from LMS"""
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._course_content
+        
+        try:
+            # Get course content from Moodle REST API
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get course content
+            content_data = rest_client.get_course_content(self._id)
+            
+            if content_data:
+                # Clear existing content
+                self._course_content.clear()
+                
+                # Parse and create sections and modules
+                for section_data in content_data:
+                    # Create section
+                    section = Section(
+                        section_id=section_data.get('id', 0),
+                        name=section_data.get('name', f"Section {section_data.get('id', 0)}")
+                    )
+                    section.set_course(self)
+                    
+                    # Add modules to section
+                    if 'modules' in section_data:
+                        for module_data in section_data['modules']:
+                            # Create module
+                            module = Module(
+                                module_id=module_data.get('id', 0),
+                                mod_name=module_data.get('modname', 'unknown'),
+                                name=module_data.get('name', 'Unnamed Module')
+                            )
+                            module.set_mod_type(module_data.get('modname', 'unknown'))
+                            module.set_section(section)
+                            
+                            # Add contents to module
+                            if 'contents' in module_data:
+                                for content_data in module_data['contents']:
+                                    content = Content(module)
+                                    content.set_file_name(content_data.get('filename', ''))
+                                    content.set_file_url(content_data.get('fileurl', ''))
+                                    content.set_file_type(content_data.get('mimetype', ''))
+                                    content.set_mime_type(content_data.get('mimetype', ''))
+                                    module.add_content(content)
+                            
+                            section.add_module(module)
+                    
+                    self._course_content.append(section)
+                    
+                print(f"Loaded {len(self._course_content)} sections for course '{self._name}'")
+            else:
+                print(f"No content found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading course content: {e}")
+        
+        return self._course_content
+    
+    def get_course_roles(self, course_roles: List[str]):
+        """Get course roles"""
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._course_roles
+        
+        try:
+            # Get enrolled users to determine available roles
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get enrolled users for this course
+            enrolled_users_data = rest_client.get_enrolled_users_by_course_id(self._id)
+            
+            if enrolled_users_data:
+                # Clear existing roles
+                self._course_roles.clear()
+                
+                # Extract unique roles from enrolled users
+                unique_roles = set()
+                for user_data in enrolled_users_data:
+                    if 'roles' in user_data:
+                        for role in user_data['roles']:
+                            unique_roles.add(role.get('name', 'Unknown'))
+                
+                # Convert to list and sort
+                self._course_roles = sorted(list(unique_roles))
+                print(f"Found {len(self._course_roles)} roles in course '{self._name}'")
+            else:
+                print(f"No enrolled users found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading course roles: {e}")
+        
+        return self._course_roles
+    
+    def get_grade_book(self):
+        """Get grade book"""
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._grade_items
+        
+        try:
+            # Get grade book from Moodle REST API
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get grade items for this course
+            grade_items_data = rest_client.get_users_grade_book(self._id)
+            
+            if grade_items_data:
+                # Clear existing grade items
+                self._grade_items.clear()
+                
+                # Create grade items from API response
+                for grade_item_data in grade_items_data:
+                    grade_item = GradeItem(
+                        item_name=grade_item_data.get('name', 'Unnamed Grade Item')
+                    )
+                    self._grade_items.append(grade_item)
+                
+                print(f"Loaded {len(self._grade_items)} grade items for course '{self._name}'")
+            else:
+                print(f"No grade items found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error loading grade book: {e}")
+        
+        return self._grade_items
+    
+    def get_user_count_by_role(self, role: str) -> int:
+        """Get user count by role"""
+        count = 0
+        for user in self._enrolled_users:
+            if role in user.get_roles():
+                count += 1
+        return count
+    
+    def refresh_enrolled_users(self):
+        """Refresh enrolled users"""
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._enrolled_users
+        
+        try:
+            # Get enrolled users from Moodle REST API
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get enrolled users for this course
+            enrolled_users_data = rest_client.get_enrolled_users_by_course_id(self._id)
+            
+            if enrolled_users_data:
+                # Clear existing enrolled users
+                self._enrolled_users.clear()
+                
+                # Create user objects from API response
+                for user_data in enrolled_users_data:
+                    user = User(
+                        user_id=user_data.get('id', 0),
+                        first_name=user_data.get('firstname', ''),
+                        last_name=user_data.get('lastname', ''),
+                        email=user_data.get('email', '')
+                    )
+                    user.set_full_name(user_data.get('fullname', ''))
+                    user.set_username(user_data.get('username', ''))
+                    user.set_course(self)
+                    user.set_lms(self._lms)
+                    
+                    # Set user roles
+                    if 'roles' in user_data:
+                        roles = [role.get('name', '') for role in user_data['roles']]
+                        user.set_roles(roles)
+                    
+                    self._enrolled_users.append(user)
+                
+                print(f"Refreshed {len(self._enrolled_users)} enrolled users for course '{self._name}'")
+            else:
+                print(f"No enrolled users found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error refreshing enrolled users: {e}")
+        
+        return self._enrolled_users
+    
+    def refresh_user_groups(self):
+        """Refresh user groups"""
+        if not self._lms or not self._lms.is_connected():
+            print("LMS not connected")
+            return self._user_groups
+        
+        try:
+            # Get user groups from Moodle REST API
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self._lms.get_host(),
+                username=self._lms.get_username(),
+                password=self._lms.get_password(),
+                service=self._lms.get_service()
+            )
+            rest_client.token = self._lms.get_token()
+            
+            # Get user groups for this course
+            groups_data = rest_client.get_user_groups_by_course_id(self._id)
+            
+            if groups_data:
+                # Clear existing user groups
+                self._user_groups.clear()
+                
+                # Create group objects from API response
+                for group_data in groups_data:
+                    group = UsersGroup(
+                        group_name=group_data.get('name', 'Unnamed Group'),
+                        group_id=group_data.get('id', 0)
+                    )
+                    
+                    # Get group members if available
+                    if 'members' in group_data:
+                        members = []
+                        for member_data in group_data['members']:
+                            user = User(
+                                user_id=member_data.get('id', 0),
+                                first_name=member_data.get('firstname', ''),
+                                last_name=member_data.get('lastname', ''),
+                                email=member_data.get('email', '')
+                            )
+                            user.set_full_name(member_data.get('fullname', ''))
+                            user.set_username(member_data.get('username', ''))
+                            user.set_course(self)
+                            user.set_lms(self._lms)
+                            members.append(user)
+                        group.set_users_in_group(members)
+                    
+                    self._user_groups.append(group)
+                
+                print(f"Refreshed {len(self._user_groups)} user groups for course '{self._name}'")
+            else:
+                print(f"No user groups found for course '{self._name}'")
+                
+        except Exception as e:
+            print(f"Error refreshing user groups: {e}")
+        
+        return self._user_groups
+    
+    # Properties to match ICourse interface
+    category = property(get_category, set_category)
+    course_content = property(get_course_content)
+    course_roles = property(get_course_roles)
+    enrolled_users = property(get_enrolled_users)
+    filter_content = property(get_filter_content)
+    grade_items = property(get_grade_items)
+    id = property(get_id)
+    lms = property(get_lms, set_lms)
+    name = property(get_name, set_name)
+    user_groups = property(get_user_groups)
+
+
+class Category(ICategory):
+    """Concrete implementation of category"""
+    
+    def __init__(self, category_id: int = 0, name: str = ""):
+        self._id = category_id
+        self._name = name
+        self._lms: Optional[ILMS] = None
+        self._courses: List[ICourse] = []
+        self._categories: List[ICategory] = []
+        self._parent_category = 0
+        self._filter_content = ""
+    
+    def get_courses(self) -> List[ICourse]:
+        return self._courses
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._name} {self._id}"
+        return self._filter_content
+    
+    def get_id(self) -> int:
+        return self._id
+    
+    def get_lms(self) -> Optional[ILMS]:
+        return self._lms
+    
+    def get_name(self) -> str:
+        return self._name
+    
+    def set_lms(self, value: Optional[ILMS]):
+        self._lms = value
+    
+    def set_name(self, value: str):
+        self._name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def add_course(self, course: ICourse):
+        """Add a course to this category"""
+        course.set_category(self)
+        self._courses.append(course)
+    
+    def remove_course(self, course: ICourse):
+        """Remove a course from this category"""
+        if course in self._courses:
+            self._courses.remove(course)
+            course.set_category(None)
+    
+    def get_categories(self) -> List[ICategory]:
+        return self._categories
+    
+    def get_courses_count(self) -> int:
+        return len(self._courses)
+    
+    def get_parent_category(self) -> int:
+        return self._parent_category
+    
+    def set_parent_category(self, value: int):
+        self._parent_category = value
+    
+    def get_sub_categories_count(self) -> int:
+        return len(self._categories)
+    
+    def add_category(self, category: ICategory):
+        """Add a sub-category to this category"""
+        self._categories.append(category)
+    
+    def remove_category(self, category: ICategory):
+        """Remove a sub-category from this category"""
+        if category in self._categories:
+            self._categories.remove(category)
+    
+    # Properties to match ICategory interface
+    courses = property(get_courses)
+    filter_content = property(get_filter_content)
+    id = property(get_id)
+    lms = property(get_lms, set_lms)
+    name = property(get_name, set_name)
+
+
+class LMS(ILMS):
+    """Concrete implementation of LMS"""
+    
+    def __init__(self, name: str = "", host: str = ""):
+        self._name = name
+        self._host = host
+        self._token = ""
+        self._user: Optional[IUser] = None
+        self._categories: List[ICategory] = []
+        self._courses: List[ICourse] = []
+        self._enrolled_courses: List[ICourse] = []
+        self._flat_courses: List[ICourse] = []
+        self._id = ""
+        self._password = ""
+        self._service = ""
+        self._username = ""
+        self._filter_content = ""
+    
+    def get_categories(self) -> List[ICategory]:
+        return self._categories
+    
+    def get_courses(self) -> List[ICourse]:
+        return self._courses
+    
+    def get_enrolled_courses(self) -> List[ICourse]:
+        return self._enrolled_courses
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._name} {self._host}"
+        return self._filter_content
+    
+    def get_host(self) -> str:
+        return self._host
+    
+    def get_name(self) -> str:
+        return self._name
+    
+    def get_token(self) -> str:
+        return self._token
+    
+    def get_user(self) -> Optional[IUser]:
+        return self._user
+    
+    def set_host(self, value: str):
+        self._host = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_name(self, value: str):
+        self._name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_token(self, value: str):
+        self._token = value
+    
+    def connect(self, username: str, password: str, service: str = "moodle_mobile_app") -> bool:
+        """Connect to the LMS using Moodle REST client"""
+        try:
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Store credentials
+            self._username = username
+            self._password = password
+            self._service = service
+            
+            # Create Moodle REST client
+            self.moodle_client = MoodleRestClient(self._host, username, password, service)
+            
+            # Connect to Moodle
+            if self.moodle_client.connect():
+                self._token = self.moodle_client.token
+                
+                # Load data from Moodle
+                self.load_lms_data()
+                return True
+            else:
+                return False
+                
+        except Exception as e:
+            print(f"Connection error: {e}")
+            return False
+    
+    def is_connected(self) -> bool:
+        return self._token != ""
+    
+    def disconnect(self):
+        """Disconnect from the LMS"""
+        try:
+            if self.moodle_client:
+                self.moodle_client.disconnect()
+            
+            # Clear connection data
+            self._token = ""
+            self._username = ""
+            self._password = ""
+            self._service = ""
+            self.moodle_client = None
+            
+            # Clear loaded data
+            self._categories.clear()
+            self._courses.clear()
+            self._enrolled_courses.clear()
+            
+            logger.info("Disconnected from LMS")
+            
+        except Exception as e:
+            logger.error(f"Error during disconnect: {e}")
+    
+    def add_category(self, category: ICategory):
+        """Add a category to the LMS"""
+        category.set_lms(self)
+        self._categories.append(category)
+    
+    def remove_category(self, category: ICategory):
+        """Remove a category from the LMS"""
+        if category in self._categories:
+            self._categories.remove(category)
+            category.set_lms(None)
+    
+    def add_course(self, course: ICourse):
+        """Add a course to the LMS"""
+        course.set_lms(self)
+        self._courses.append(course)
+    
+    def remove_course(self, course: ICourse):
+        """Remove a course from the LMS"""
+        if course in self._courses:
+            self._courses.remove(course)
+            course.set_lms(None)
+    
+    def add_enrolled_course(self, course: ICourse):
+        """Add an enrolled course to the LMS"""
+        course.set_lms(self)
+        self._enrolled_courses.append(course)
+    
+    def remove_enrolled_course(self, course: ICourse):
+        """Remove an enrolled course from the LMS"""
+        if course in self._enrolled_courses:
+            self._enrolled_courses.remove(course)
+            course.set_lms(None)
+    
+    def get_flat_courses(self) -> List[ICourse]:
+        return self._flat_courses
+    
+    def set_flat_courses(self, courses: List[ICourse]):
+        self._flat_courses = courses
+    
+    def get_id(self) -> str:
+        return self._id
+    
+    def set_id(self, value: str):
+        self._id = value
+    
+    def get_password(self) -> str:
+        return self._password
+    
+    def set_password(self, value: str):
+        self._password = value
+    
+    def get_service(self) -> str:
+        return self._service
+    
+    def set_service(self, value: str):
+        self._service = value
+    
+    def get_username(self) -> str:
+        return self._username
+    
+    def set_username(self, value: str):
+        self._username = value
+    
+    def first_level_categories_count(self) -> int:
+        """Get count of first level categories"""
+        return len(self._categories)
+    
+    def load_lms_data(self):
+        """Load all LMS data (categories, courses, etc.) from Moodle"""
+        try:
+            # Clear existing data
+            self._categories.clear()
+            self._courses.clear()
+            self._enrolled_courses.clear()
+            
+            # Load categories
+            self.load_categories()
+            
+            # Load courses
+            self.load_courses()
+            
+            # Load enrolled courses
+            self.load_enrolled_courses()
+            
+            print(f"Loaded {len(self._categories)} categories, {len(self._courses)} courses, {len(self._enrolled_courses)} enrolled courses")
+            
+        except Exception as e:
+            print(f"Error loading LMS data: {e}")
+    
+    def load_categories(self):
+        """Load categories from Moodle"""
+        try:
+            categories_data = self.moodle_client.get_categories()
+            if categories_data:
+                for cat_data in categories_data:
+                    category = Category(
+                        category_id=cat_data.get('id', 0),
+                        name=cat_data.get('name', f"Category {cat_data.get('id', 0)}")
+                    )
+                    category.set_lms(self)
+                    self._categories.append(category)
+        except Exception as e:
+            print(f"Error loading categories: {e}")
+    
+    def load_courses(self):
+        """Load courses from Moodle"""
+        try:
+            courses_data = self.moodle_client.get_courses()
+            if courses_data:
+                for course_data in courses_data:
+                    course = Course(
+                        course_id=course_data.get('id', 0),
+                        name=course_data.get('fullname', f"Course {course_data.get('id', 0)}")
+                    )
+                    course.set_lms(self)
+                    
+                    # Set category if available
+                    category_id = course_data.get('categoryid', 0)
+                    if category_id > 0:
+                        category = self.get_category_by_id(category_id)
+                        if category:
+                            course.set_category(category)
+                            category.add_course(course)
+                    else:
+                        # Course without category
+                        self._courses.append(course)
+        except Exception as e:
+            print(f"Error loading courses: {e}")
+    
+    def load_enrolled_courses(self):
+        """Load enrolled courses for the current user"""
+        try:
+            # Get user info first
+            user_data = self.moodle_client.get_user_by_field('username', self._username)
+            if user_data:
+                user_id = user_data.get('id', 0)
+                if user_id > 0:
+                    # Get enrolled courses using core_enrol_get_users_courses
+                    enrolled_data = self.moodle_client.get_users_courses(user_id)
+                    if enrolled_data:
+                        for enrolled_course in enrolled_data:
+                            course = Course(
+                                course_id=enrolled_course.get('id', 0),
+                                name=enrolled_course.get('fullname', f"Course {enrolled_course.get('id', 0)}")
+                            )
+                            course.set_lms(self)
+                            self._enrolled_courses.append(course)
+        except Exception as e:
+            print(f"Error loading enrolled courses: {e}")
+    
+    def get_categories_from_connection(self):
+        """Get categories from LMS connection (legacy method)"""
+        self.load_categories()
+        return self._categories
+    
+    def get_category_by_id(self, category_id: int) -> Optional[ICategory]:
+        """Get category by ID"""
+        for category in self._categories:
+            if category.get_id() == category_id:
+                return category
+        return None
+    
+    def get_course_by_id(self, course_id: int) -> Optional[ICourse]:
+        """Get course by ID"""
+        for course in self._courses:
+            if course.get_id() == course_id:
+                return course
+        return None
+    
+    def get_courses(self):
+        """Get courses from LMS"""
+        self.load_courses()
+        return self._courses
+    
+    def get_users_by_almost_all_fields(self, filter_str: str) -> List[IUser]:
+        """Get users by almost all fields"""
+        if not self.is_connected():
+            print("LMS not connected")
+            return []
+        
+        try:
+            # Get users from Moodle REST API
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self.get_host(),
+                username=self.get_username(),
+                password=self.get_password(),
+                service=self.get_service()
+            )
+            rest_client.token = self.get_token()
+            
+            # Search for users by various fields
+            # We'll use the get_users method with criteria
+            criteria = [
+                {'key': 'firstname', 'value': filter_str},
+                {'key': 'lastname', 'value': filter_str},
+                {'key': 'email', 'value': filter_str},
+                {'key': 'username', 'value': filter_str},
+                {'key': 'idnumber', 'value': filter_str}
+            ]
+            
+            users_data = rest_client.get_users(criteria)
+            
+            if users_data:
+                users = []
+                for user_data in users_data:
+                    user = User(
+                        user_id=user_data.get('id', 0),
+                        first_name=user_data.get('firstname', ''),
+                        last_name=user_data.get('lastname', ''),
+                        email=user_data.get('email', '')
+                    )
+                    user.set_full_name(user_data.get('fullname', ''))
+                    user.set_username(user_data.get('username', ''))
+                    user.set_lms(self)
+                    
+                    # Set user roles if available
+                    if 'roles' in user_data:
+                        roles = [role.get('name', '') for role in user_data['roles']]
+                        user.set_roles(roles)
+                    
+                    users.append(user)
+                
+                print(f"Found {len(users)} users matching '{filter_str}'")
+                return users
+            else:
+                print(f"No users found matching '{filter_str}'")
+                return []
+                
+        except Exception as e:
+            print(f"Error searching users: {e}")
+            return []
+    
+    def download_all_course_content(self, course: ICourse):
+        """Download all course content"""
+        if not self.is_connected():
+            print("LMS not connected")
+            return
+        
+        try:
+            import os
+            from services.moodle.moodle_rest import MoodleRestClient
+            
+            # Create a REST client with the LMS connection details
+            rest_client = MoodleRestClient(
+                host=self.get_host(),
+                username=self.get_username(),
+                password=self.get_password(),
+                service=self.get_service()
+            )
+            rest_client.token = self.get_token()
+            
+            # Create download directory if it doesn't exist
+            download_dir = f"downloads/{course.get_name()}"
+            os.makedirs(download_dir, exist_ok=True)
+            
+            print(f"Downloading course content to: {download_dir}")
+            
+            # Get course content
+            course_content = course.get_course_content()
+            downloaded_files = 0
+            
+            # Iterate through sections and modules
+            for section in course_content:
+                section_dir = os.path.join(download_dir, section.get_name())
+                os.makedirs(section_dir, exist_ok=True)
+                
+                for module in section.get_modules():
+                    module_dir = os.path.join(section_dir, module.get_name())
+                    os.makedirs(module_dir, exist_ok=True)
+                    
+                    # Download content files
+                    for content in module.get_contents():
+                        if content.get_file_url():
+                            file_name = content.get_file_name() or f"file_{downloaded_files}"
+                            file_path = os.path.join(module_dir, file_name)
+                            
+                            print(f"Downloading: {file_name}")
+                            
+                            if rest_client.download_file(content.get_file_url(), file_path):
+                                downloaded_files += 1
+                            else:
+                                print(f"Failed to download: {file_name}")
+            
+            print(f"Downloaded {downloaded_files} files for course '{course.get_name()}'")
+            
+        except Exception as e:
+            print(f"Error downloading course content: {e}")
+    
+    # Properties required by ILMS interface
+    categories = property(get_categories)
+    courses = property(get_courses)
+    enrolled_courses = property(get_enrolled_courses)
+    filter_content = property(get_filter_content)
+    host = property(get_host, set_host)
+    name = property(get_name, set_name)
+    token = property(get_token, set_token)
+    user = property(get_user)
+
+
+class Content(IContent):
+    """Concrete implementation of content file"""
+    
+    def __init__(self, module: Optional['IModule'] = None):
+        self._file_name = ""
+        self._file_type = ""
+        self._mime_type = ""
+        self._file_url = ""
+        self._module = module
+        self._filter_content = ""
+    
+    def get_file_name(self) -> str:
+        return self._file_name
+    
+    def get_file_type(self) -> str:
+        return self._file_type
+    
+    def get_mime_type(self) -> str:
+        return self._mime_type
+    
+    def get_file_url(self) -> str:
+        return self._file_url
+    
+    def get_module(self) -> Optional['IModule']:
+        return self._module
+    
+    def get_filter_content(self) -> str:
+        if not self._filter_content:
+            self._filter_content = f"{self._file_name} {self._file_type}"
+        return self._filter_content
+    
+    def set_file_name(self, value: str):
+        self._file_name = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_file_type(self, value: str):
+        self._file_type = value
+        self._filter_content = ""  # Reset filter content
+    
+    def set_mime_type(self, value: str):
+        self._mime_type = value
+    
+    def set_file_url(self, value: str):
+        self._file_url = value
+    
+    def set_module(self, value: Optional['IModule']):
+        self._module = value
+    
+    # Properties
+    file_name = property(get_file_name, set_file_name)
+    file_type = property(get_file_type, set_file_type)
+    mime_type = property(get_mime_type, set_mime_type)
+    file_url = property(get_file_url, set_file_url)
+    module = property(get_module, set_module)
+    filter_content = property(get_filter_content)
+
+
+class LMSNetwork:
+    """Network class for managing multiple LMS instances"""
+    
+    def __init__(self):
+        self._lms_list: List[ILMS] = []
+    
+    def add(self, lms: ILMS):
+        """Add an LMS instance to the network"""
+        self._lms_list.append(lms)
+    
+    def count(self) -> int:
+        """Get the number of LMS instances in the network"""
+        return len(self._lms_list)
+    
+    def get_lms(self, index: int) -> Optional[ILMS]:
+        """Get an LMS instance by index"""
+        if 0 <= index < len(self._lms_list):
+            return self._lms_list[index]
+        return None
+    
+    def remove(self, index: int):
+        """Remove an LMS instance by index"""
+        if 0 <= index < len(self._lms_list):
+            self._lms_list.pop(index)
+    
+    def clear(self):
+        """Clear all LMS instances from the network"""
+        self._lms_list.clear()
+    
+    def get_all_lms(self) -> List[ILMS]:
+        """Get all LMS instances in the network"""
+        return self._lms_list.copy()
+    
+    # Allow indexing access
+    def __getitem__(self, index: int) -> Optional[ILMS]:
+        return self.get_lms(index)
+    
+    def __setitem__(self, index: int, value: ILMS):
+        if 0 <= index < len(self._lms_list):
+            self._lms_list[index] = value
+    
+    def __len__(self) -> int:
+        return self.count()
+    
+    def __iter__(self):
+        return iter(self._lms_list)
+
+
+# Global network instance
+_global_lms_network: Optional[LMSNetwork] = None
+
+
+def get_global_network() -> LMSNetwork:
+    """Get the global LMS network instance"""
+    global _global_lms_network
+    if _global_lms_network is None:
+        _global_lms_network = LMSNetwork()
+    return _global_lms_network
+
+
+# API Response Models
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+from pydantic import BaseModel
+
+
+class MoodleAPIResponse(BaseModel):
+    """Standard response model for Moodle API operations"""
+    success: bool
+    data: Optional[Any] = None
+    message: Optional[str] = None
+
+
+class ErrorResponse(BaseModel):
+    """Standard error response model for API errors"""
+    success: bool
+    error_code: str
+    message: str
+    moodle_error: Optional[str] = None
+    suggestions: List[str] = []
+    request_id: Optional[str] = None
+    timestamp: Optional[datetime] = None
+
+
+# Additional Model Classes for API
+class Group(BaseModel):
+    """Group model"""
+    id: int
+    name: str
+    description: Optional[str] = None
+
+
+class Enrollment(BaseModel):
+    """Enrollment model"""
+    id: int
+    user_id: int
+    course_id: int
+    role_id: int
+
+
+class Grade(BaseModel):
+    """Grade model"""
+    id: int
+    user_id: int
+    grade_item_id: int
+    grade_value: float
+
+
+class Role(BaseModel):
+    """Role model"""
+    id: int
+    name: str
+    shortname: str
+
+
+class AssignmentSubmission(BaseModel):
+    """Assignment submission model"""
+    id: int
+    assignment_id: int
+    user_id: int
+    status: str
+    submitted_date: Optional[int] = None
+
+
+class CalendarEvent(BaseModel):
+    """Calendar event model"""
+    id: int
+    name: str
+    description: Optional[str] = None
+    event_type: str
+    course_id: Optional[int] = None
+    start_date: int
+    end_date: int
+
+
+class Message(BaseModel):
+    """Message model"""
+    id: int
+    user_id_from: int
+    user_id_to: int
+    subject: str
+    message: str
+    time_created: int
+
+
+class FileInfo(BaseModel):
+    """File info model"""
+    id: int
+    file_name: str
+    file_path: str
+    file_size: int
+    mime_type: str
+
+
+# Moodle API Request Models
+class MoodleUserCreateRequest(BaseModel):
+    """Request model for creating Moodle users"""
+    username: str
+    password: str
+    firstname: str
+    lastname: str
+    email: str
+    auth: Optional[str] = "manual"
+    idnumber: Optional[str] = None
+    lang: Optional[str] = "en"
+    calendartype: Optional[str] = "gregorian"
+    theme: Optional[str] = None
+    timezone: Optional[str] = "UTC"
+    mailformat: Optional[int] = 1
+    description: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    preferences: Optional[List[Dict[str, Any]]] = None
+
+
+class MoodleUserUpdateRequest(BaseModel):
+    """Request model for updating Moodle users"""
+    username: Optional[str] = None
+    firstname: Optional[str] = None
+    lastname: Optional[str] = None
+    email: Optional[str] = None
+    auth: Optional[str] = None
+    idnumber: Optional[str] = None
+    lang: Optional[str] = None
+    calendartype: Optional[str] = None
+    theme: Optional[str] = None
+    timezone: Optional[str] = None
+    mailformat: Optional[int] = None
+    description: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    preferences: Optional[List[Dict[str, Any]]] = None
+
+
+class MoodleCourseCreateRequest(BaseModel):
+    """Request model for creating Moodle courses"""
+    fullname: str
+    shortname: str
+    categoryid: int
+    idnumber: Optional[str] = None
+    summary: Optional[str] = None
+    format: Optional[str] = "topics"
+    showgrades: Optional[int] = 1
+    newsitems: Optional[int] = 5
+    startdate: Optional[int] = None
+    enddate: Optional[int] = None
+    numsections: Optional[int] = 10
+    maxbytes: Optional[int] = 0
+    showreports: Optional[int] = 0
+    visible: Optional[int] = 1
+    groupmode: Optional[int] = 0
+    groupmodeforce: Optional[int] = 0
+    defaultgroupingid: Optional[int] = 0
+    enablecompletion: Optional[int] = 0
+    completionnotify: Optional[int] = 0
+    lang: Optional[str] = None
+    forcetheme: Optional[str] = None
+
+
+class MoodleCourseUpdateRequest(BaseModel):
+    """Request model for updating Moodle courses"""
+    fullname: Optional[str] = None
+    shortname: Optional[str] = None
+    categoryid: Optional[int] = None
+    idnumber: Optional[str] = None
+    summary: Optional[str] = None
+    format: Optional[str] = None
+    showgrades: Optional[int] = None
+    newsitems: Optional[int] = None
+    startdate: Optional[int] = None
+    enddate: Optional[int] = None
+    numsections: Optional[int] = None
+    maxbytes: Optional[int] = None
+    showreports: Optional[int] = None
+    visible: Optional[int] = None
+    groupmode: Optional[int] = None
+    groupmodeforce: Optional[int] = None
+    defaultgroupingid: Optional[int] = None
+    enablecompletion: Optional[int] = None
+    completionnotify: Optional[int] = None
+    lang: Optional[str] = None
+    forcetheme: Optional[str] = None
+
+
+class MoodleGroupCreateRequest(BaseModel):
+    """Request model for creating Moodle groups"""
+    courseid: int
+    name: str
+    description: Optional[str] = None
+    enrolmentkey: Optional[str] = None
+
+
+class MoodleEnrollmentRequest(BaseModel):
+    """Request model for Moodle enrollments"""
+    roleid: int
+    userid: int
+    courseid: int
+    timestart: Optional[int] = None
+    timeend: Optional[int] = None
+    suspend: Optional[int] = 0
+
+
+class MoodleGradeUpdateRequest(BaseModel):
+    """Request model for updating Moodle grades"""
+    studentid: int
+    gradeitemid: int
+    grade: float
+    feedback: Optional[str] = None
+
+
+class MoodleRoleAssignmentRequest(BaseModel):
+    """Request model for Moodle role assignments"""
+    roleid: int
+    userid: int
+    contextid: int
+    contextlevel: str
+    instanceid: int
+
+
+class MoodleMessageRequest(BaseModel):
+    """Request model for Moodle messages"""
+    touserid: int
+    subject: str
+    message: str
+
+
+class MoodleFileUploadRequest(BaseModel):
+    """Request model for Moodle file uploads"""
+    component: str
+    filearea: str
+    itemid: int
+    filepath: str
+    filename: str
+    filecontent: str  # Base64 encoded
+
+
+class MoodleCalendarEventRequest(BaseModel):
+    """Request model for Moodle calendar events"""
+    name: str
+    description: Optional[str] = None
+    eventtype: str
+    courseid: Optional[int] = None
+    groupid: Optional[int] = None
+    userid: Optional[int] = None
+    starttime: int
+    endtime: int
+    timeduration: Optional[int] = None
+    visible: Optional[int] = 1
+    sequence: Optional[int] = 1
